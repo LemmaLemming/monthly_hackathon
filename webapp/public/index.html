@@ -35,6 +35,7 @@
           <div class="action-row">
             <button id="transcriptionToggle" class="secondary">Start Transcription</button>
             <button id="addPhysicianButton" class="primary">Add Physician</button>
+            <button id="endCallButton" class="danger">End Call</button>
           </div>
         </div>
       </header>
@@ -119,6 +120,35 @@ Current Status</textarea>
         </aside>
       </section>
     </main>
+
+    <div id="endCallModal" class="modal-shell" hidden>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="endCallTitle">
+        <div class="modal-header">
+          <div>
+            <span class="toolbar-label">Post-Call Guidance</span>
+            <strong id="endCallTitle">Patient Follow-Up Summary</strong>
+          </div>
+          <button type="button" id="closeEndCallModalButton" class="ghost">Close</button>
+        </div>
+
+        <p class="modal-copy">
+          AI-generated next steps for the patient after the dispatcher ends the call.
+        </p>
+
+        <textarea
+          id="followUpOutput"
+          class="summary-box modal-summary-box"
+          spellcheck="true"
+          placeholder="Follow-up instructions will appear here after the call ends."
+        ></textarea>
+
+        <div class="modal-actions">
+          <button type="button" id="regenerateFollowUpButton" class="ghost">Regenerate</button>
+          <button type="button" id="sendSmsButton" class="primary">Send SMS</button>
+        </div>
+        <p id="smsStatus" class="modal-status">SMS not sent.</p>
+      </div>
+    </div>
 
     <script type="module" src="/app.js"></script>
   </body>

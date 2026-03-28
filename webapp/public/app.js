@@ -12,6 +12,13 @@ const physicianReplyForm = document.getElementById("physicianReplyForm");
 const physicianReplyInput = document.getElementById("physicianReplyInput");
 const voiceToTextButton = document.getElementById("voiceToTextButton");
 const addPhysicianButton = document.getElementById("addPhysicianButton");
+const endCallButton = document.getElementById("endCallButton");
+const endCallModal = document.getElementById("endCallModal");
+const closeEndCallModalButton = document.getElementById("closeEndCallModalButton");
+const followUpOutput = document.getElementById("followUpOutput");
+const regenerateFollowUpButton = document.getElementById("regenerateFollowUpButton");
+const sendSmsButton = document.getElementById("sendSmsButton");
+const smsStatus = document.getElementById("smsStatus");
 
 let audioContext;
 let mediaStream;
@@ -256,6 +263,23 @@ Transcript:
 ${transcript}`;
 }
 
+function buildFollowUpPrompt(transcript) {
+  return `You are helping an emergency dispatcher close a call.
+
+Based on the transcript below, write a concise patient-facing follow-up message that can be sent by SMS.
+
+Requirements:
+- Plain language.
+- 4 to 6 short bullet points.
+- Focus on immediate next steps only.
+- Include when to call emergency services again.
+- Do not mention internal clinical reasoning.
+- Do not use markdown headings.
+
+Transcript:
+${transcript}`;
+}
+
 async function generateGeminiSummary(prompt) {
   const response = await fetch("/api/ai/summary", {
     method: "POST",
@@ -325,6 +349,31 @@ async function postConsultationMessage(payload) {
   }
 
   return response.json();
+}
+
+async function sendPatientSms(message) {
+  const response = await fetch("/api/patient/sms", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ message }),
+  });
+
+  const rawBody = await response.text();
+  let payload = {};
+
+  try {
+    payload = rawBody ? JSON.parse(rawBody) : {};
+  } catch {
+    throw new Error("SMS service returned an invalid response.");
+  }
+
+  if (!response.ok) {
+    throw new Error(payload.error || "Unable to send SMS.");
+  }
+
+  return payload;
 }
 
 function renderConsultationMessage(message) {
@@ -409,6 +458,54 @@ async function sendDispatcherReply(text) {
     kind: "message",
     text: message,
   });
+}
+
+function openEndCallModal() {
+  endCallModal.hidden = false;
+  document.body.classList.add("modal-open");
+}
+
+function closeEndCallModal() {
+  endCallModal.hidden = true;
+  document.body.classList.remove("modal-open");
+}
+
+async function generateFollowUpSummary() {
+  const transcript = getTranscriptForSummary();
+
+  if (!transcript) {
+    followUpOutput.value =
+      "- Stay where you are and keep your phone nearby.\n- Follow any dispatcher instructions already provided.\n- If symptoms get worse, call emergency services again immediately.\n- Do not drive yourself if chest pain, trouble breathing, or dizziness continues.";
+    return;
+  }
+
+  regenerateFollowUpButton.disabled = true;
+  sendSmsButton.disabled = true;
+  smsStatus.textContent = "Generating follow-up instructions...";
+
+  try {
+    const prompt = buildFollowUpPrompt(transcript);
+    const summary = await generateGeminiSummary(prompt);
+    followUpOutput.value = summary || "No follow-up instructions returned.";
+    smsStatus.textContent = "Follow-up instructions ready.";
+  } catch (error) {
+    console.error(error);
+    followUpOutput.value = `Follow-up generation failed: ${error.message}`;
+    smsStatus.textContent = "Follow-up generation failed.";
+  } finally {
+    regenerateFollowUpButton.disabled = false;
+    sendSmsButton.disabled = false;
+  }
+}
+
+async function handleEndCall() {
+  if (isTranscribing) {
+    await stopTranscription();
+  }
+
+  smsStatus.textContent = "Generating follow-up instructions...";
+  openEndCallModal();
+  await generateFollowUpSummary();
 }
 
 function arrayBufferToBase64(buffer) {
@@ -701,11 +798,55 @@ addPhysicianButton.addEventListener("click", () => {
   window.open("/physicians-portal/", "_blank", "noopener,noreferrer");
 });
 
+endCallButton.addEventListener("click", async () => {
+  await handleEndCall();
+});
+
+closeEndCallModalButton.addEventListener("click", () => {
+  closeEndCallModal();
+});
+
+endCallModal.addEventListener("click", (event) => {
+  if (event.target === endCallModal) {
+    closeEndCallModal();
+  }
+});
+
+regenerateFollowUpButton.addEventListener("click", async () => {
+  await generateFollowUpSummary();
+});
+
+sendSmsButton.addEventListener("click", async () => {
+  const message = followUpOutput.value.trim();
+  if (!message) {
+    smsStatus.textContent = "Nothing to send.";
+    return;
+  }
+
+  sendSmsButton.disabled = true;
+  smsStatus.textContent = "Sending SMS...";
+
+  try {
+    const payload = await sendPatientSms(message);
+    smsStatus.textContent = payload.status || "SMS sent.";
+  } catch (error) {
+    console.error(error);
+    smsStatus.textContent = `SMS failed: ${error.message}`;
+  } finally {
+    sendSmsButton.disabled = false;
+  }
+});
+
 document.addEventListener("keydown", (event) => {
   const activeElement = document.activeElement;
   const isEditingBubble =
     activeElement && activeElement.classList && activeElement.classList.contains("bubble-edit");
   const isTypingConsultation = activeElement === physicianReplyInput;
+
+  if (event.code === "Escape" && !endCallModal.hidden) {
+    closeEndCallModal();
+    return;
+  }
 
   if (event.code !== "Space" || isEditingBubble || isTypingConsultation) {
     return;

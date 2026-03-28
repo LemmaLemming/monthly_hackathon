@@ -192,6 +192,23 @@ app.post("/api/consultation/messages", (req, res) => {
   res.status(201).json({ ok: true, message });
 });
 
+app.post("/api/patient/sms", (req, res) => {
+  const { message } = req.body || {};
+
+  if (!message) {
+    res.status(400).json({ error: "message is required." });
+    return;
+  }
+
+  console.log("Placeholder SMS queued for patient follow-up:");
+  console.log(message);
+
+  res.status(200).json({
+    ok: true,
+    status: "SMS queued to patient follow-up channel.",
+  });
+});
+
 app.get("/scribe-token", placeholderAuthMiddleware, async (_req, res) => {
   if (!process.env.ELEVENLABS_API_KEY) {
     res.status(500).json({
