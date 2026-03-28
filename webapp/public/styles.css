@@ -405,9 +405,9 @@ kbd {
 
 .message-row {
   display: grid;
-  grid-template-columns: minmax(140px, 180px) 1fr;
+  grid-template-columns: minmax(84px, 0.82fr) minmax(0, 0.18fr);
   align-items: start;
-  gap: 14px;
+  gap: 10px;
   width: 100%;
   padding: 12px 4px;
   border-bottom: 1px solid #a9b4bf;
@@ -452,9 +452,10 @@ kbd {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 3px;
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.78rem;
+  line-height: 1.2;
 }
 
 .timestamp {
@@ -468,7 +469,7 @@ kbd {
 
 .speaker-label {
   color: var(--text);
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;

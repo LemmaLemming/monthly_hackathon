@@ -30,8 +30,8 @@ let hasSentAudio = false;
 let isTranscribing = false;
 let currentSpeaker = "patient";
 let draftMessage = null;
+let previousBubbleText = "";
 let sessionCommittedText = "";
-let bubbleBaseline = "";
 let consultationMessageIds = new Set();
 
 function setConnectionState(state) {
@@ -185,7 +185,6 @@ function createSwitchNote(nextSpeaker) {
 function ensureDraftMessage() {
   if (!draftMessage || draftMessage.speaker !== currentSpeaker) {
     finalizeDraftMessage();
-    bubbleBaseline = sessionCommittedText;
     draftMessage = createMessageBubble(currentSpeaker);
   }
 
@@ -213,10 +212,9 @@ function appendCommittedText(text) {
 function normalizeIncomingTranscript(text) {
   const incoming = (text || "").trim();
   if (!incoming) return "";
-  if (bubbleBaseline && incoming.startsWith(bubbleBaseline)) {
-    return incoming.slice(bubbleBaseline.length).trimStart();
+  if (sessionCommittedText && incoming.startsWith(sessionCommittedText)) {
+    return incoming.slice(sessionCommittedText.length).trimStart();
   }
-  if (bubbleBaseline) return "";
   return incoming;
 }
 
@@ -684,7 +682,7 @@ async function stopTranscription() {
   ws = null;
   hasSentAudio = false;
   sessionCommittedText = "";
-  bubbleBaseline = "";
+  previousBubbleText = "";
 }
 
 async function startTranscription() {
@@ -692,7 +690,7 @@ async function startTranscription() {
   setConnectionState("Connecting");
   liveDotEl.classList.add("live");
   sessionCommittedText = "";
-  bubbleBaseline = "";
+  previousBubbleText = "";
 
   try {
     const token = await fetchScribeToken();
@@ -751,11 +749,27 @@ async function startTranscription() {
 
 function toggleSpeaker() {
   const nextSpeaker = currentSpeaker === "patient" ? "dispatcher" : "patient";
+
+  previousBubbleText = draftMessage ? draftMessage.bubble.textContent.trim() : "";
+
   finalizeDraftMessage();
-  sessionCommittedText = "";
-  bubbleBaseline = "";
   setActiveSpeaker(nextSpeaker);
   createSwitchNote(nextSpeaker);
+
+  draftMessage = createMessageBubble(currentSpeaker);
+
+  setTimeout(() => {
+    if (!draftMessage) return;
+    const current = draftMessage.bubble.textContent.trim();
+    if (previousBubbleText && current.startsWith(previousBubbleText)) {
+      const stripped = current.slice(previousBubbleText.length).trimStart();
+      draftMessage.bubble.textContent = stripped;
+      sessionCommittedText = stripped;
+    } else {
+      sessionCommittedText = "";
+    }
+    previousBubbleText = "";
+  }, 300);
 }
 
 transcriptionToggleButton.addEventListener("click", () => {
