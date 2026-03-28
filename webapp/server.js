@@ -4,6 +4,7 @@ import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 
 const app = express();
 const port = process.env.PORT || 3000;
+const host = process.env.HOST || "127.0.0.1";
 
 if (!process.env.ELEVENLABS_API_KEY) {
   console.warn("ELEVENLABS_API_KEY is not set. /scribe-token will fail until it is configured.");
@@ -43,6 +44,6 @@ app.get("/scribe-token", placeholderAuthMiddleware, async (_req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Live transcription app running at http://localhost:${port}`);
+app.listen(port, host, () => {
+  console.log(`Live transcription app running at http://${host}:${port}`);
 });

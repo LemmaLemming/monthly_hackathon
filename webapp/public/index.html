@@ -3,72 +3,51 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Live Speech Transcription</title>
+    <title>Healthline Dispatcher Transcription Interface</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <main class="app-shell">
-      <section class="hero">
-        <p class="eyebrow">ElevenLabs Realtime STT</p>
-        <h1>Live speech to text, streamed from your microphone.</h1>
-        <p class="hero-copy">
-          The browser captures audio, your server mints a single-use
-          <code>realtime_scribe</code> token, and ElevenLabs returns partial and
-          committed transcripts in real time.
-        </p>
-
-        <div class="control-row">
-          <button id="startButton" class="primary">Start Transcription</button>
-          <button id="stopButton" class="secondary" disabled>Stop</button>
-        </div>
-
-        <div class="status-strip">
-          <div>
-            <span class="status-label">Connection</span>
-            <strong id="connectionState">Idle</strong>
-          </div>
-          <div>
-            <span class="status-label">Sample Rate</span>
-            <strong id="sampleRate">16000 Hz</strong>
-          </div>
-          <div>
-            <span class="status-label">Model</span>
-            <strong>scribe_v2_realtime</strong>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel-grid">
-        <article class="panel">
-          <div class="panel-header">
-            <h2>Live partial transcript</h2>
-            <span class="dot" id="liveDot"></span>
-          </div>
-          <p id="partialTranscript" class="transcript partial">
-            Start recording to see interim words appear here.
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">Healthline</p>
+          <h1>Dispatcher Transcription Interface</h1>
+          <p class="header-copy">
+            Press <kbd>SPACE</kbd> to switch the upcoming live transcript between
+            Patient and Dispatcher.
           </p>
-        </article>
-
-        <article class="panel">
-          <div class="panel-header">
-            <h2>Committed transcript</h2>
-            <button id="clearButton" class="ghost">Clear</button>
-          </div>
-          <div id="committedTranscript" class="transcript committed"></div>
-        </article>
-      </section>
-
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Event log</h2>
         </div>
-        <div id="eventLog" class="event-log"></div>
+
+        <div class="header-actions">
+          <div class="header-status">
+            <span class="status-dot" id="liveDot"></span>
+            <span id="connectionState">Idle</span>
+            <span class="divider">•</span>
+            <span id="activeSpeakerLabel">Patient</span>
+          </div>
+          <button id="transcriptionToggle" class="primary">Start Transcription</button>
+        </div>
+      </header>
+
+      <section class="transcript-shell">
+        <div class="transcript-toolbar">
+          <div>
+            <span class="toolbar-label">Active stream</span>
+            <strong>Realtime Scribe</strong>
+          </div>
+          <div>
+            <span class="toolbar-label">Input</span>
+            <strong id="sampleRate">16000 Hz mono PCM</strong>
+          </div>
+        </div>
+
+        <div id="transcriptStream" class="transcript-stream"></div>
       </section>
     </main>
 

@@ -1,49 +1,217 @@
-const startButton = document.getElementById("startButton");
-const stopButton = document.getElementById("stopButton");
-const clearButton = document.getElementById("clearButton");
-const partialTranscriptEl = document.getElementById("partialTranscript");
-const committedTranscriptEl = document.getElementById("committedTranscript");
-const eventLogEl = document.getElementById("eventLog");
+const transcriptionToggleButton = document.getElementById("transcriptionToggle");
+const transcriptStreamEl = document.getElementById("transcriptStream");
 const connectionStateEl = document.getElementById("connectionState");
 const sampleRateEl = document.getElementById("sampleRate");
 const liveDotEl = document.getElementById("liveDot");
+const activeSpeakerLabelEl = document.getElementById("activeSpeakerLabel");
 
 let audioContext;
 let mediaStream;
 let mediaStreamSource;
 let processorNode;
 let ws;
-let committedSegments = [];
 let hasSentAudio = false;
+let isTranscribing = false;
+let currentSpeaker = "patient";
+let draftMessage = null;
+let transcriptHistory = "";
 
 function setConnectionState(state) {
   connectionStateEl.textContent = state;
 }
 
-function appendEvent(message) {
-  const item = document.createElement("div");
-  item.className = "event-item";
-  item.textContent = `${new Date().toLocaleTimeString()}  ${message}`;
-  eventLogEl.prepend(item);
-
-  while (eventLogEl.children.length > 12) {
-    eventLogEl.removeChild(eventLogEl.lastChild);
-  }
+function setActiveSpeaker(speaker) {
+  currentSpeaker = speaker;
+  activeSpeakerLabelEl.textContent = speaker === "patient" ? "Patient" : "Dispatcher";
 }
 
-function renderCommittedTranscript() {
-  if (committedSegments.length === 0) {
-    committedTranscriptEl.innerHTML = '<p class="segment">Committed transcript segments will appear here.</p>';
+function formatTimestamp(date = new Date()) {
+  return date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
+
+function ensureEmptyState() {
+  if (transcriptStreamEl.children.length > 0) {
     return;
   }
 
-  committedTranscriptEl.innerHTML = "";
-  for (const segment of committedSegments) {
-    const el = document.createElement("p");
-    el.className = "segment";
-    el.textContent = segment;
-    committedTranscriptEl.appendChild(el);
+  const emptyState = document.createElement("div");
+  emptyState.className = "empty-state";
+  emptyState.id = "emptyState";
+  emptyState.textContent = "Start transcription to build the live patient and dispatcher transcript.";
+  transcriptStreamEl.appendChild(emptyState);
+}
+
+function removeEmptyState() {
+  const emptyState = document.getElementById("emptyState");
+  if (emptyState) {
+    emptyState.remove();
   }
+}
+
+function scrollTranscriptToBottom() {
+  transcriptStreamEl.scrollTop = transcriptStreamEl.scrollHeight;
+}
+
+function placeCaretFromPoint(editableElement, x, y) {
+  editableElement.focus();
+
+  if (document.caretPositionFromPoint) {
+    const position = document.caretPositionFromPoint(x, y);
+    if (position && editableElement.contains(position.offsetNode)) {
+      const range = document.createRange();
+      range.setStart(position.offsetNode, position.offset);
+      range.collapse(true);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return;
+    }
+  }
+
+  if (document.caretRangeFromPoint) {
+    const range = document.caretRangeFromPoint(x, y);
+    if (range && editableElement.contains(range.startContainer)) {
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return;
+    }
+  }
+
+  const fallbackRange = document.createRange();
+  fallbackRange.selectNodeContents(editableElement);
+  fallbackRange.collapse(false);
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(fallbackRange);
+}
+
+function attachEditableBehavior(editableElement) {
+  editableElement.addEventListener("mousedown", (event) => {
+    placeCaretFromPoint(editableElement, event.clientX, event.clientY);
+    event.preventDefault();
+  });
+}
+
+function createMessageBubble(speaker) {
+  removeEmptyState();
+
+  const row = document.createElement("article");
+  row.className = `message-row ${speaker}`;
+
+  const bubble = document.createElement("div");
+  bubble.className = `bubble-edit ${speaker} live`;
+  bubble.contentEditable = "true";
+  bubble.spellcheck = true;
+  bubble.dataset.speaker = speaker;
+  bubble.textContent = "";
+  attachEditableBehavior(bubble);
+
+  const meta = document.createElement("div");
+  meta.className = "message-meta";
+
+  const timestamp = document.createElement("span");
+  timestamp.className = "timestamp";
+  timestamp.textContent = formatTimestamp();
+
+  const role = document.createElement("span");
+  role.className = "role-live";
+  role.textContent = speaker === "patient" ? "Patient (Live)" : "Dispatcher (Live)";
+
+  meta.append(timestamp, role);
+  row.append(bubble, meta);
+  transcriptStreamEl.appendChild(row);
+  scrollTranscriptToBottom();
+
+  return {
+    speaker,
+    row,
+    bubble,
+    timestamp,
+    role,
+  };
+}
+
+function finalizeDraftMessage() {
+  if (!draftMessage) {
+    return;
+  }
+
+  draftMessage.bubble.classList.remove("live");
+  draftMessage.role.textContent = draftMessage.speaker === "patient" ? "Patient" : "Dispatcher";
+  draftMessage = null;
+}
+
+function createSwitchNote(nextSpeaker) {
+  removeEmptyState();
+
+  const note = document.createElement("p");
+  note.className = "switch-note";
+  note.textContent =
+    nextSpeaker === "dispatcher"
+      ? "Switched to Dispatcher, press SPACE to switch back."
+      : "Switched to Patient, press SPACE to switch back.";
+  transcriptStreamEl.appendChild(note);
+  scrollTranscriptToBottom();
+}
+
+function ensureDraftMessage() {
+  if (!draftMessage || draftMessage.speaker !== currentSpeaker) {
+    finalizeDraftMessage();
+    draftMessage = createMessageBubble(currentSpeaker);
+  }
+
+  return draftMessage;
+}
+
+function updateDraftText(text) {
+  const message = ensureDraftMessage();
+  message.bubble.textContent = text || "";
+  message.timestamp.textContent = formatTimestamp();
+  scrollTranscriptToBottom();
+}
+
+function appendCommittedText(text) {
+  if (!text) {
+    return;
+  }
+
+  const message = ensureDraftMessage();
+  message.bubble.textContent = text;
+  message.timestamp.textContent = formatTimestamp();
+  scrollTranscriptToBottom();
+}
+
+function normalizeIncomingTranscript(text) {
+  const incoming = (text || "").trim();
+  const history = transcriptHistory.trim();
+
+  if (!incoming) {
+    return "";
+  }
+
+  if (history && incoming.startsWith(history)) {
+    return incoming.slice(history.length).trimStart();
+  }
+
+  return incoming;
+}
+
+function rememberCommittedTranscript(text) {
+  const normalized = normalizeIncomingTranscript(text);
+
+  if (!normalized) {
+    return;
+  }
+
+  transcriptHistory = transcriptHistory
+    ? `${transcriptHistory} ${normalized}`.trim()
+    : normalized;
 }
 
 function arrayBufferToBase64(buffer) {
@@ -120,25 +288,23 @@ function handleSocketMessage(event) {
   switch (data.message_type) {
     case "session_started":
       setConnectionState("Listening");
-      appendEvent("Realtime session started.");
       return;
     case "partial_transcript":
-      partialTranscriptEl.textContent = data.text || "";
+      updateDraftText(normalizeIncomingTranscript(data.text || ""));
       return;
     case "committed_transcript":
-      if (data.text) {
-        committedSegments.push(data.text);
-        renderCommittedTranscript();
-        partialTranscriptEl.textContent = "Waiting for more speech...";
-      }
+      appendCommittedText(normalizeIncomingTranscript(data.text || ""));
+      rememberCommittedTranscript(data.text || "");
+      finalizeDraftMessage();
       return;
     case "committed_transcript_with_timestamps":
-      appendEvent(`Committed transcript with ${data.words?.length || 0} timestamped items.`);
+      if (data.text) {
+        appendCommittedText(normalizeIncomingTranscript(data.text));
+        rememberCommittedTranscript(data.text);
+        finalizeDraftMessage();
+      }
       return;
     default:
-      if (data.type || data.error || data.message) {
-        appendEvent(`Server event: ${data.type || data.message_type || "unknown"}`);
-      }
   }
 }
 
@@ -157,7 +323,7 @@ async function startAudioPipeline() {
   mediaStreamSource = audioContext.createMediaStreamSource(mediaStream);
   processorNode = audioContext.createScriptProcessor(4096, 1, 1);
 
-  sampleRateEl.textContent = "16000 Hz";
+  sampleRateEl.textContent = "16000 Hz mono PCM";
 
   processorNode.onaudioprocess = (audioProcessingEvent) => {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -173,7 +339,7 @@ async function startAudioPipeline() {
         message_type: "input_audio_chunk",
         audio_base_64: arrayBufferToBase64(pcmBuffer),
         sample_rate: 16000,
-        ...(hasSentAudio ? {} : { previous_text: "Live microphone transcription." }),
+        ...(hasSentAudio ? {} : { previous_text: "Emergency call transcription." }),
       }),
     );
 
@@ -210,11 +376,12 @@ async function stopAudioPipeline() {
 }
 
 async function stopTranscription() {
-  startButton.disabled = false;
-  stopButton.disabled = true;
+  isTranscribing = false;
+  transcriptionToggleButton.textContent = "Start Transcription";
   liveDotEl.classList.remove("live");
   setConnectionState("Stopped");
 
+  finalizeDraftMessage();
   await stopAudioPipeline();
 
   if (ws && ws.readyState === WebSocket.OPEN) {
@@ -223,14 +390,13 @@ async function stopTranscription() {
 
   ws = null;
   hasSentAudio = false;
+  transcriptHistory = "";
 }
 
 async function startTranscription() {
-  startButton.disabled = true;
-  stopButton.disabled = false;
+  transcriptionToggleButton.textContent = "Stop Transcription";
   setConnectionState("Connecting");
   liveDotEl.classList.add("live");
-  partialTranscriptEl.textContent = "Requesting microphone permission and ElevenLabs token...";
 
   try {
     const token = await fetchScribeToken();
@@ -242,10 +408,13 @@ async function startTranscription() {
     ws = new WebSocket(url);
     ws.addEventListener("message", handleSocketMessage);
     ws.addEventListener("error", () => {
-      appendEvent("WebSocket error.");
-      partialTranscriptEl.textContent = "Connection error. Check the event log.";
+      setConnectionState("Connection error");
     });
     ws.addEventListener("close", () => {
+      if (!isTranscribing) {
+        return;
+      }
+
       setConnectionState("Disconnected");
       liveDotEl.classList.remove("live");
     });
@@ -259,7 +428,6 @@ async function startTranscription() {
         "open",
         () => {
           clearTimeout(timeoutId);
-          appendEvent("WebSocket opened.");
           resolve();
         },
         { once: true },
@@ -276,27 +444,43 @@ async function startTranscription() {
     });
 
     await startAudioPipeline();
+    isTranscribing = true;
+    setConnectionState("Listening");
   } catch (error) {
     console.error(error);
-    appendEvent(error.message);
-    partialTranscriptEl.textContent = error.message;
+    setConnectionState(error.message);
     await stopTranscription();
   }
 }
 
-startButton.addEventListener("click", () => {
+function toggleSpeaker() {
+  const nextSpeaker = currentSpeaker === "patient" ? "dispatcher" : "patient";
+  finalizeDraftMessage();
+  setActiveSpeaker(nextSpeaker);
+  createSwitchNote(nextSpeaker);
+}
+
+transcriptionToggleButton.addEventListener("click", () => {
+  if (isTranscribing) {
+    stopTranscription();
+    return;
+  }
+
   startTranscription();
 });
 
-stopButton.addEventListener("click", () => {
-  stopTranscription();
+document.addEventListener("keydown", (event) => {
+  const activeElement = document.activeElement;
+  const isEditingBubble =
+    activeElement && activeElement.classList && activeElement.classList.contains("bubble-edit");
+
+  if (event.code !== "Space" || isEditingBubble) {
+    return;
+  }
+
+  event.preventDefault();
+  toggleSpeaker();
 });
 
-clearButton.addEventListener("click", () => {
-  committedSegments = [];
-  partialTranscriptEl.textContent = "Start recording to see interim words appear here.";
-  renderCommittedTranscript();
-  eventLogEl.innerHTML = "";
-});
-
-renderCommittedTranscript();
+setActiveSpeaker(currentSpeaker);
+ensureEmptyState();
