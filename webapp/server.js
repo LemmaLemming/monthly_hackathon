@@ -10,9 +10,14 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 3000;
 const host = process.env.HOST || "127.0.0.1";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 if (!process.env.ELEVENLABS_API_KEY) {
   console.warn("ELEVENLABS_API_KEY is not set. /scribe-token will fail until it is configured.");
+}
+
+if (!process.env.GEMINI_API_KEY) {
+  console.warn("GEMINI_API_KEY is not set. /api/ai/summary will fail until it is configured.");
 }
 
 const elevenlabs = new ElevenLabsClient({
@@ -33,14 +38,6 @@ const consultationMessages = [
     timestamp: "14:22:40",
     text:
       "54-year-old, chest pressure and heaviness for 20+ minutes, persistent despite antacids. Pain radiating left. Escalating symptoms. Treat as cardiac until proven otherwise.",
-  },
-  {
-    id: "seed-primary-concern",
-    author: "physician",
-    role: "Dr. Aris Thorne",
-    kind: "primary-concern",
-    timestamp: "14:22:40",
-    text: "Primary Concern ACS or Heart Attack. ER",
   },
   {
     id: "seed-dispatcher-ack",
@@ -103,6 +100,57 @@ app.get("/api/consultation/history", (_req, res) => {
     },
     messages: consultationMessages,
   });
+});
+
+app.post("/api/ai/summary", async (req, res) => {
+  const { prompt } = req.body || {};
+
+  if (!prompt) {
+    res.status(400).json({ error: "prompt is required." });
+    return;
+  }
+
+  if (!process.env.GEMINI_API_KEY) {
+    res.status(500).json({ error: "Missing GEMINI_API_KEY on the server." });
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: prompt }],
+            },
+          ],
+        }),
+      },
+    );
+
+    const payload = await response.json();
+
+    if (!response.ok) {
+      res.status(response.status).json({
+        error: payload.error?.message || "Failed to generate Gemini summary.",
+      });
+      return;
+    }
+
+    const summary =
+      payload.candidates?.[0]?.content?.parts?.map((part) => part.text).join("\n").trim() || "";
+
+    res.json({ summary });
+  } catch (error) {
+    console.error("Failed to generate Gemini summary:", error);
+    res.status(500).json({ error: "Failed to generate Gemini summary." });
+  }
 });
 
 app.get("/api/consultation/stream", (req, res) => {

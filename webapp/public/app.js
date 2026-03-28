@@ -13,9 +13,6 @@ const physicianReplyInput = document.getElementById("physicianReplyInput");
 const voiceToTextButton = document.getElementById("voiceToTextButton");
 const addPhysicianButton = document.getElementById("addPhysicianButton");
 
-const GEMINI_API_KEY = "GEMINI_API_KEY_PLACEHOLDER";
-const GEMINI_MODEL = "gemini-2.0-flash";
-
 let audioContext;
 let mediaStream;
 let mediaStreamSource;
@@ -260,31 +257,32 @@ ${transcript}`;
 }
 
 async function generateGeminiSummary(prompt) {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }],
-          },
-        ],
-      }),
+  const response = await fetch("/api/ai/summary", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify({ prompt }),
+  });
 
-  const payload = await response.json();
+  const rawBody = await response.text();
+  let payload = {};
 
-  if (!response.ok) {
-    throw new Error(payload.error?.message || "Failed to generate Gemini summary.");
+  try {
+    payload = rawBody ? JSON.parse(rawBody) : {};
+  } catch {
+    throw new Error(
+      response.ok
+        ? "Summary service returned an invalid response."
+        : `Summary service error (${response.status}): ${rawBody.slice(0, 160) || "Empty response."}`,
+    );
   }
 
-  return payload.candidates?.[0]?.content?.parts?.map((part) => part.text).join("\n").trim() || "";
+  if (!response.ok) {
+    throw new Error(payload.error || "Failed to generate Gemini summary.");
+  }
+
+  return payload.summary || "";
 }
 
 async function summarizeConversation() {
@@ -301,13 +299,6 @@ async function summarizeConversation() {
 
   try {
     const prompt = buildSummaryPrompt(transcript);
-
-    if (GEMINI_API_KEY === "GEMINI_API_KEY_PLACEHOLDER") {
-      summaryOutput.value =
-        "Patient Profile\nPlaceholder Gemini summary\n\nChief Complaint\nPersistent chest pressure after spicy lunch\n\nDuration\nTwenty minutes and worsening\n\nPain Radiation\nNow traveling down left arm\n\nAssociated Symptoms\nApprehensive, alone, dizziness questioned\n\nPotential Mimics\nHeartburn, musculoskeletal strain\n\nCurrent Status\nEscalating chest pain in 54-year-old patient\n\nReplace GEMINI_API_KEY_PLACEHOLDER in public/app.js to enable live AI summaries.";
-      return;
-    }
-
     const summary = await generateGeminiSummary(prompt);
     summaryOutput.value = summary || "No summary returned.";
   } catch (error) {
@@ -348,10 +339,6 @@ function renderConsultationMessage(message) {
 
   const bubble = document.createElement("div");
   bubble.className = `consultation-bubble ${message.author}`;
-
-  if (message.kind === "primary-concern") {
-    bubble.classList.add("primary-concern");
-  }
 
   if (message.kind === "summary") {
     bubble.classList.add("summary");

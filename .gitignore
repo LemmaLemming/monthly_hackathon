@@ -1,5 +1,2 @@
 myenv/
-
-API KEYS DO NOT REMOVE
-webapp/.env.example
 webapp/.env

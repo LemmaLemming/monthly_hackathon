@@ -34,7 +34,7 @@
         <section class="panel">
           <div class="panel-heading">
             <div>
-              <span class="toolbar-label">Dispatcher Messages</span>
+              <span class="toolbar-label">Consultation Thread</span>
               <strong>Incoming Consultation Feed</strong>
             </div>
           </div>
@@ -50,7 +50,11 @@
           </div>
           <form id="replyForm" class="reply-form">
             <textarea id="replyInput" rows="8" placeholder="Type physician guidance..."></textarea>
-            <button type="submit">Send Response</button>
+            <div class="reply-actions">
+              <button type="button" id="voiceTypingButton" class="secondary-button">Start Voice Typing</button>
+              <button type="submit">Send Response</button>
+            </div>
+            <p id="voiceTypingStatus" class="voice-status">Voice typing idle.</p>
           </form>
         </section>
       </section>
