@@ -244,20 +244,19 @@ function getTranscriptForSummary() {
 }
 
 function buildSummaryPrompt(transcript) {
-  return `Summarize the following emergency call transcript.
+  return `Role: Act as a Clinical Scribe.
 
-Use short, incomplete sentence states.
+Task: Analyze the following live emergency call transcript. Instead of answering questions, extract all medical data into a single, condensed summary block.
 
-Return only these headings in this exact order:
-Patient Profile
-Chief Complaint
-Duration
-Pain Radiation
-Associated Symptoms
-Potential Mimics
-Current Status
+Constraints:
 
-If information is missing, leave the heading in place and write "Unknown".
+Style: Use shorthand and clinical fragments. Do not use full sentences or conversational filler.
+
+Terminology: Map symptoms to clinical terms where appropriate (e.g., if the patient says "breathing fast," use "tachypnea").
+
+Categorization: If a symptom suggests a specific body system, note it in parentheses (e.g., "Spicy food (GI)").
+
+Formatting: Separate items with commas or semicolons. Do not include the original questions asked by the dispatcher; focus only on the gathered data.
 
 Transcript:
 ${transcript}`;

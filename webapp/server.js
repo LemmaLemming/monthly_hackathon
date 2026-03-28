@@ -29,25 +29,7 @@ const consultationClients = {
   physician: new Set(),
 };
 
-const consultationMessages = [
-  {
-    id: "seed-physician-summary",
-    author: "physician",
-    role: "Dr. Aris Thorne",
-    kind: "message",
-    timestamp: "14:22:40",
-    text:
-      "54-year-old, chest pressure and heaviness for 20+ minutes, persistent despite antacids. Pain radiating left. Escalating symptoms. Treat as cardiac until proven otherwise.",
-  },
-  {
-    id: "seed-dispatcher-ack",
-    author: "dispatcher",
-    role: "Dispatcher",
-    kind: "message",
-    timestamp: "14:22:40",
-    text: "Okay",
-  },
-];
+const consultationMessages = [];
 
 function formatTimestamp(date = new Date()) {
   return date.toLocaleTimeString("en-CA", {
