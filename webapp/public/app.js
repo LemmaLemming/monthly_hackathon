@@ -4,17 +4,31 @@ const connectionStateEl = document.getElementById("connectionState");
 const sampleRateEl = document.getElementById("sampleRate");
 const liveDotEl = document.getElementById("liveDot");
 const activeSpeakerLabelEl = document.getElementById("activeSpeakerLabel");
+const summaryButton = document.getElementById("summaryButton");
+const summaryOutput = document.getElementById("summaryOutput");
+const sendSummaryButton = document.getElementById("sendSummaryButton");
+const consultationFeedEl = document.getElementById("consultationFeed");
+const physicianReplyForm = document.getElementById("physicianReplyForm");
+const physicianReplyInput = document.getElementById("physicianReplyInput");
+const voiceToTextButton = document.getElementById("voiceToTextButton");
+const addPhysicianButton = document.getElementById("addPhysicianButton");
+
+const GEMINI_API_KEY = "GEMINI_API_KEY_PLACEHOLDER";
+const GEMINI_MODEL = "gemini-2.0-flash";
 
 let audioContext;
 let mediaStream;
 let mediaStreamSource;
 let processorNode;
 let ws;
+let consultationStream;
 let hasSentAudio = false;
 let isTranscribing = false;
 let currentSpeaker = "patient";
 let draftMessage = null;
 let sessionCommittedText = "";
+let bubbleBaseline = "";
+let consultationMessageIds = new Set();
 
 function setConnectionState(state) {
   connectionStateEl.textContent = state;
@@ -55,6 +69,10 @@ function removeEmptyState() {
 
 function scrollTranscriptToBottom() {
   transcriptStreamEl.scrollTop = transcriptStreamEl.scrollHeight;
+}
+
+function scrollConsultationToBottom() {
+  consultationFeedEl.scrollTop = consultationFeedEl.scrollHeight;
 }
 
 function placeCaretFromPoint(editableElement, x, y) {
@@ -120,7 +138,7 @@ function createMessageBubble(speaker) {
   timestamp.textContent = formatTimestamp();
 
   const role = document.createElement("span");
-  role.className = "role-live";
+  role.className = "speaker-label role-live";
   role.textContent = speaker === "patient" ? "Patient (Live)" : "Dispatcher (Live)";
 
   meta.append(timestamp, role);
@@ -163,6 +181,7 @@ function createSwitchNote(nextSpeaker) {
 function ensureDraftMessage() {
   if (!draftMessage || draftMessage.speaker !== currentSpeaker) {
     finalizeDraftMessage();
+    bubbleBaseline = sessionCommittedText;
     draftMessage = createMessageBubble(currentSpeaker);
   }
 
@@ -190,14 +209,219 @@ function appendCommittedText(text) {
 function normalizeIncomingTranscript(text) {
   const incoming = (text || "").trim();
   if (!incoming) return "";
-  if (sessionCommittedText && incoming.startsWith(sessionCommittedText)) {
-    return incoming.slice(sessionCommittedText.length).trimStart();
+  if (bubbleBaseline && incoming.startsWith(bubbleBaseline)) {
+    return incoming.slice(bubbleBaseline.length).trimStart();
   }
+  if (bubbleBaseline) return "";
   return incoming;
 }
 
 function rememberCommittedTranscript(text) {
   sessionCommittedText = (text || "").trim();
+}
+
+function getTranscriptForSummary() {
+  const messageRows = Array.from(transcriptStreamEl.querySelectorAll(".message-row"));
+
+  return messageRows
+    .map((row) => {
+      const speaker = row.querySelector(".speaker-label")?.textContent?.replace(" (Live)", "") || "Unknown";
+      const timestamp = row.querySelector(".timestamp")?.textContent || "";
+      const content = row.querySelector(".bubble-edit")?.textContent?.trim() || "";
+
+      if (!content) {
+        return "";
+      }
+
+      return `${timestamp} ${speaker}: ${content}`;
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+function buildSummaryPrompt(transcript) {
+  return `Summarize the following emergency call transcript.
+
+Use short, incomplete sentence states.
+
+Return only these headings in this exact order:
+Patient Profile
+Chief Complaint
+Duration
+Pain Radiation
+Associated Symptoms
+Potential Mimics
+Current Status
+
+If information is missing, leave the heading in place and write "Unknown".
+
+Transcript:
+${transcript}`;
+}
+
+async function generateGeminiSummary(prompt) {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }],
+          },
+        ],
+      }),
+    },
+  );
+
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload.error?.message || "Failed to generate Gemini summary.");
+  }
+
+  return payload.candidates?.[0]?.content?.parts?.map((part) => part.text).join("\n").trim() || "";
+}
+
+async function summarizeConversation() {
+  const transcript = getTranscriptForSummary();
+
+  if (!transcript) {
+    summaryOutput.value =
+      "Patient Profile\nUnknown\n\nChief Complaint\nUnknown\n\nDuration\nUnknown\n\nPain Radiation\nUnknown\n\nAssociated Symptoms\nUnknown\n\nPotential Mimics\nUnknown\n\nCurrent Status\nUnknown";
+    return;
+  }
+
+  summaryButton.disabled = true;
+  summaryButton.textContent = "Generating Summary...";
+
+  try {
+    const prompt = buildSummaryPrompt(transcript);
+
+    if (GEMINI_API_KEY === "GEMINI_API_KEY_PLACEHOLDER") {
+      summaryOutput.value =
+        "Patient Profile\nPlaceholder Gemini summary\n\nChief Complaint\nPersistent chest pressure after spicy lunch\n\nDuration\nTwenty minutes and worsening\n\nPain Radiation\nNow traveling down left arm\n\nAssociated Symptoms\nApprehensive, alone, dizziness questioned\n\nPotential Mimics\nHeartburn, musculoskeletal strain\n\nCurrent Status\nEscalating chest pain in 54-year-old patient\n\nReplace GEMINI_API_KEY_PLACEHOLDER in public/app.js to enable live AI summaries.";
+      return;
+    }
+
+    const summary = await generateGeminiSummary(prompt);
+    summaryOutput.value = summary || "No summary returned.";
+  } catch (error) {
+    console.error(error);
+    summaryOutput.value = `Summary failed: ${error.message}`;
+  } finally {
+    summaryButton.disabled = false;
+    summaryButton.textContent = "Generate AI Summary";
+  }
+}
+
+async function postConsultationMessage(payload) {
+  const response = await fetch("/api/consultation/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: "Unable to send message." }));
+    throw new Error(error.error || "Unable to send message.");
+  }
+
+  return response.json();
+}
+
+function renderConsultationMessage(message) {
+  if (!message?.id || consultationMessageIds.has(message.id)) {
+    return;
+  }
+
+  consultationMessageIds.add(message.id);
+
+  const item = document.createElement("article");
+  item.className = `consultation-message ${message.author}`;
+
+  const bubble = document.createElement("div");
+  bubble.className = `consultation-bubble ${message.author}`;
+
+  if (message.kind === "primary-concern") {
+    bubble.classList.add("primary-concern");
+  }
+
+  if (message.kind === "summary") {
+    bubble.classList.add("summary");
+  }
+
+  bubble.textContent = message.text;
+
+  const meta = document.createElement("div");
+  meta.className = "consultation-meta";
+  meta.textContent = `${message.timestamp} | ${message.role}`;
+
+  item.append(bubble, meta);
+  consultationFeedEl.appendChild(item);
+  scrollConsultationToBottom();
+}
+
+async function loadConsultationHistory() {
+  const response = await fetch("/api/consultation/history");
+  const payload = await response.json();
+  consultationFeedEl.innerHTML = "";
+  consultationMessageIds = new Set();
+  payload.messages.forEach(renderConsultationMessage);
+}
+
+function connectConsultationStream() {
+  if (consultationStream) {
+    consultationStream.close();
+  }
+
+  consultationStream = new EventSource("/api/consultation/stream?client=dispatcher");
+  consultationStream.addEventListener("message", (event) => {
+    const payload = JSON.parse(event.data);
+    renderConsultationMessage(payload);
+  });
+}
+
+async function sendSummaryToPhysician() {
+  const text = summaryOutput.value.trim();
+  if (!text) {
+    return;
+  }
+
+  sendSummaryButton.disabled = true;
+
+  try {
+    await postConsultationMessage({
+      author: "dispatcher",
+      role: "Dispatcher",
+      kind: "summary",
+      text,
+    });
+  } catch (error) {
+    console.error(error);
+  } finally {
+    sendSummaryButton.disabled = false;
+  }
+}
+
+async function sendDispatcherReply(text) {
+  const message = text.trim();
+  if (!message) {
+    return;
+  }
+
+  await postConsultationMessage({
+    author: "dispatcher",
+    role: "Dispatcher",
+    kind: "message",
+    text: message,
+  });
 }
 
 function arrayBufferToBase64(buffer) {
@@ -377,12 +601,15 @@ async function stopTranscription() {
   ws = null;
   hasSentAudio = false;
   sessionCommittedText = "";
+  bubbleBaseline = "";
 }
 
 async function startTranscription() {
   transcriptionToggleButton.textContent = "Stop Transcription";
   setConnectionState("Connecting");
   liveDotEl.classList.add("live");
+  sessionCommittedText = "";
+  bubbleBaseline = "";
 
   try {
     const token = await fetchScribeToken();
@@ -442,6 +669,8 @@ async function startTranscription() {
 function toggleSpeaker() {
   const nextSpeaker = currentSpeaker === "patient" ? "dispatcher" : "patient";
   finalizeDraftMessage();
+  sessionCommittedText = "";
+  bubbleBaseline = "";
   setActiveSpeaker(nextSpeaker);
   createSwitchNote(nextSpeaker);
 }
@@ -455,12 +684,43 @@ transcriptionToggleButton.addEventListener("click", () => {
   startTranscription();
 });
 
+summaryButton.addEventListener("click", () => {
+  summarizeConversation();
+});
+
+sendSummaryButton.addEventListener("click", () => {
+  sendSummaryToPhysician();
+});
+
+physicianReplyForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const value = physicianReplyInput.value;
+  physicianReplyInput.value = "";
+
+  try {
+    await sendDispatcherReply(value);
+  } catch (error) {
+    console.error(error);
+    physicianReplyInput.value = value;
+  }
+});
+
+voiceToTextButton.addEventListener("click", () => {
+  physicianReplyInput.value = `${physicianReplyInput.value}${physicianReplyInput.value ? " " : ""}[Voice note placeholder]`;
+  physicianReplyInput.focus();
+});
+
+addPhysicianButton.addEventListener("click", () => {
+  window.open("/physicians-portal/", "_blank", "noopener,noreferrer");
+});
+
 document.addEventListener("keydown", (event) => {
   const activeElement = document.activeElement;
   const isEditingBubble =
     activeElement && activeElement.classList && activeElement.classList.contains("bubble-edit");
+  const isTypingConsultation = activeElement === physicianReplyInput;
 
-  if (event.code !== "Space" || isEditingBubble) {
+  if (event.code !== "Space" || isEditingBubble || isTypingConsultation) {
     return;
   }
 
@@ -470,3 +730,5 @@ document.addEventListener("keydown", (event) => {
 
 setActiveSpeaker(currentSpeaker);
 ensureEmptyState();
+loadConsultationHistory();
+connectConsultationStream();

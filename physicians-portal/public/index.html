@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Physicians Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/physicians-portal/styles.css" />
+  </head>
+  <body>
+    <main class="portal-shell">
+      <header class="portal-header">
+        <div>
+          <p class="eyebrow">Clinical Consultation</p>
+          <h1>Physicians Portal</h1>
+          <p class="header-copy">
+            Placeholder live channel for physician review and response.
+          </p>
+        </div>
+        <div class="physician-status">
+          <span class="availability-dot"></span>
+          <span>Dr. Aris Thorne</span>
+          <span class="divider">•</span>
+          <span>AVAILABLE</span>
+        </div>
+      </header>
+
+      <section class="portal-grid">
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="toolbar-label">Dispatcher Messages</span>
+              <strong>Incoming Consultation Feed</strong>
+            </div>
+          </div>
+          <div id="incomingFeed" class="message-feed"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="toolbar-label">Respond</span>
+              <strong>Physician Reply</strong>
+            </div>
+          </div>
+          <form id="replyForm" class="reply-form">
+            <textarea id="replyInput" rows="8" placeholder="Type physician guidance..."></textarea>
+            <button type="submit">Send Response</button>
+          </form>
+        </section>
+      </section>
+    </main>
+
+    <script type="module" src="/physicians-portal/app.js"></script>
+  </body>
+</html>

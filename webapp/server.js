@@ -1,6 +1,11 @@
 import "dotenv/config";
 import express from "express";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -14,15 +19,129 @@ const elevenlabs = new ElevenLabsClient({
   apiKey: process.env.ELEVENLABS_API_KEY,
 });
 
+const consultationClients = {
+  dispatcher: new Set(),
+  physician: new Set(),
+};
+
+const consultationMessages = [
+  {
+    id: "seed-physician-summary",
+    author: "physician",
+    role: "Dr. Aris Thorne",
+    kind: "message",
+    timestamp: "14:22:40",
+    text:
+      "54-year-old, chest pressure and heaviness for 20+ minutes, persistent despite antacids. Pain radiating left. Escalating symptoms. Treat as cardiac until proven otherwise.",
+  },
+  {
+    id: "seed-primary-concern",
+    author: "physician",
+    role: "Dr. Aris Thorne",
+    kind: "primary-concern",
+    timestamp: "14:22:40",
+    text: "Primary Concern ACS or Heart Attack. ER",
+  },
+  {
+    id: "seed-dispatcher-ack",
+    author: "dispatcher",
+    role: "Dispatcher",
+    kind: "message",
+    timestamp: "14:22:40",
+    text: "Okay",
+  },
+];
+
+function formatTimestamp(date = new Date()) {
+  return date.toLocaleTimeString("en-CA", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
+
+function broadcastConsultationMessage(message) {
+  const payload = `data: ${JSON.stringify(message)}\n\n`;
+
+  for (const clientGroup of Object.values(consultationClients)) {
+    for (const response of clientGroup) {
+      response.write(payload);
+    }
+  }
+}
+
+function registerConsultationClient(type, response) {
+  const group = consultationClients[type] || consultationClients.dispatcher;
+  group.add(response);
+
+  response.write("retry: 3000\n\n");
+
+  return () => {
+    group.delete(response);
+  };
+}
+
 // Placeholder auth. Replace this with real session or JWT validation before production use.
 function placeholderAuthMiddleware(_req, _res, next) {
   next();
 }
 
-app.use(express.static("public"));
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
+app.use("/physicians-portal", express.static(path.join(__dirname, "..", "physicians-portal", "public")));
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
+});
+
+app.get("/api/consultation/history", (_req, res) => {
+  res.json({
+    physician: {
+      name: "Dr. Aris Thorne",
+      status: "AVAILABLE",
+    },
+    messages: consultationMessages,
+  });
+});
+
+app.get("/api/consultation/stream", (req, res) => {
+  const type = req.query.client === "physician" ? "physician" : "dispatcher";
+
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+  });
+
+  const unregister = registerConsultationClient(type, res);
+
+  req.on("close", () => {
+    unregister();
+    res.end();
+  });
+});
+
+app.post("/api/consultation/messages", (req, res) => {
+  const { author, role, kind = "message", text } = req.body || {};
+
+  if (!text || !author || !role) {
+    res.status(400).json({ error: "author, role, and text are required." });
+    return;
+  }
+
+  const message = {
+    id: `msg-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    author,
+    role,
+    kind,
+    text,
+    timestamp: formatTimestamp(),
+  };
+
+  consultationMessages.push(message);
+  broadcastConsultationMessage(message);
+  res.status(201).json({ ok: true, message });
 });
 
 app.get("/scribe-token", placeholderAuthMiddleware, async (_req, res) => {

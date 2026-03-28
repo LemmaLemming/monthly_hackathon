@@ -31,23 +31,95 @@
             <span class="divider">•</span>
             <span id="activeSpeakerLabel">Patient</span>
           </div>
-          <button id="transcriptionToggle" class="primary">Start Transcription</button>
+
+          <div class="action-row">
+            <button id="transcriptionToggle" class="secondary">Start Transcription</button>
+            <button id="addPhysicianButton" class="primary">Add Physician</button>
+          </div>
         </div>
       </header>
 
-      <section class="transcript-shell">
-        <div class="transcript-toolbar">
-          <div>
-            <span class="toolbar-label">Active stream</span>
-            <strong>Realtime Scribe</strong>
+      <section class="workspace-grid">
+        <section class="transcript-shell">
+          <div class="transcript-toolbar">
+            <div>
+              <span class="toolbar-label">Active stream</span>
+              <strong>Realtime Scribe</strong>
+            </div>
+            <div>
+              <span class="toolbar-label">Input</span>
+              <strong id="sampleRate">16000 Hz mono PCM</strong>
+            </div>
           </div>
-          <div>
-            <span class="toolbar-label">Input</span>
-            <strong id="sampleRate">16000 Hz mono PCM</strong>
-          </div>
-        </div>
 
-        <div id="transcriptStream" class="transcript-stream"></div>
+          <div id="transcriptStream" class="transcript-stream"></div>
+        </section>
+
+        <aside class="consult-shell">
+          <div class="consult-header">
+            <div>
+              <span class="toolbar-label">Clinical Consultation</span>
+              <strong>Physician Response</strong>
+            </div>
+            <a class="portal-link" href="/physicians-portal/" target="_blank" rel="noreferrer">
+              Open Physician Portal
+            </a>
+          </div>
+
+          <section class="physician-card">
+            <div class="physician-avatar" aria-hidden="true">AT</div>
+            <div class="physician-identity">
+              <strong>Dr. Aris Thorne</strong>
+              <p><span class="availability-dot"></span> STATUS: AVAILABLE</p>
+            </div>
+          </section>
+
+          <section class="summary-composer">
+            <div class="summary-composer-header">
+              <div>
+                <span class="toolbar-label">AI Consultation Brief</span>
+                <strong>Prepare Handoff</strong>
+              </div>
+              <button id="summaryButton" class="ghost">Generate AI Summary</button>
+            </div>
+            <textarea
+              id="summaryOutput"
+              class="summary-box"
+              spellcheck="true"
+            >Patient Profile
+Chief Complaint
+Duration
+Pain Radiation
+Associated Symptoms
+Potential Mimics
+Current Status</textarea>
+            <button id="sendSummaryButton" class="primary wide-button">
+              Send AI Summary To Physician
+            </button>
+          </section>
+
+          <div id="primaryConcernBubble" class="concern-bubble">
+            Primary Concern ACS or Heart Attack. ER
+          </div>
+
+          <section id="consultationFeed" class="consultation-feed"></section>
+
+          <form id="physicianReplyForm" class="consultation-composer">
+            <label class="sr-only" for="physicianReplyInput">Reply to physician</label>
+            <textarea
+              id="physicianReplyInput"
+              class="consultation-input"
+              rows="2"
+              placeholder="Type quick notes..."
+            ></textarea>
+            <div class="consultation-actions">
+              <button type="button" id="voiceToTextButton" class="icon-button" aria-label="Voice to text">
+                Mic
+              </button>
+              <button type="submit" class="secondary">Reply</button>
+            </div>
+          </form>
+        </aside>
       </section>
     </main>
 
