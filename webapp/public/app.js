@@ -4,6 +4,8 @@ const connectionStateEl = document.getElementById("connectionState");
 const sampleRateEl = document.getElementById("sampleRate");
 const liveDotEl = document.getElementById("liveDot");
 const activeSpeakerLabelEl = document.getElementById("activeSpeakerLabel");
+const operatorQueueEl = document.getElementById("operatorQueue");
+const operatorDetailEl = document.getElementById("operatorDetail");
 
 let audioContext;
 let mediaStream;
@@ -15,6 +17,10 @@ let isTranscribing = false;
 let currentSpeaker = "patient";
 let draftMessage = null;
 let transcriptHistory = "";
+const operatorState = {
+  cases: [],
+  selectedCaseId: null,
+};
 
 function setConnectionState(state) {
   connectionStateEl.textContent = state;
@@ -212,6 +218,216 @@ function rememberCommittedTranscript(text) {
   transcriptHistory = transcriptHistory
     ? `${transcriptHistory} ${normalized}`.trim()
     : normalized;
+}
+
+function safeText(text) {
+  return String(text || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function selectedOperatorCase() {
+  return operatorState.cases.find((item) => item.id === operatorState.selectedCaseId) || null;
+}
+
+function upsertOperatorCase(updatedCase) {
+  const index = operatorState.cases.findIndex((item) => item.id === updatedCase.id);
+
+  if (index === -1) {
+    operatorState.cases.push(updatedCase);
+  } else {
+    operatorState.cases[index] = updatedCase;
+  }
+
+  operatorState.cases.sort((a, b) => b.updatedAt - a.updatedAt);
+
+  if (!operatorState.selectedCaseId) {
+    operatorState.selectedCaseId = operatorState.cases[0]?.id || null;
+  }
+}
+
+function renderOperatorQueue() {
+  if (!operatorQueueEl) {
+    return;
+  }
+
+  if (operatorState.cases.length === 0) {
+    operatorQueueEl.innerHTML = '<p class="empty-state">No escalated specialist cases yet.</p>';
+    return;
+  }
+
+  operatorQueueEl.innerHTML = operatorState.cases
+    .map((item) => {
+      const isSelected = item.id === operatorState.selectedCaseId ? "selected" : "";
+
+      return `
+        <button class="op-queue-item ${isSelected}" data-op-case-id="${safeText(item.id)}">
+          <div class="op-queue-top">
+            <span class="op-urgency-pill">${safeText(item.urgency)}</span>
+            <span>${safeText(item.waitingMinutes)} min</span>
+          </div>
+          <strong>${safeText(item.patientName)}</strong>
+          <p>${safeText(item.chiefConcern)}</p>
+          <div class="op-queue-foot">
+            <span>${safeText(item.id)}</span>
+            <span class="op-status-pill ${safeText(item.status)}">${safeText(
+              String(item.status).replaceAll("_", " "),
+            )}</span>
+          </div>
+        </button>
+      `;
+    })
+    .join("");
+}
+
+function renderOperatorThread(caseItem) {
+  if (!Array.isArray(caseItem.messages) || caseItem.messages.length === 0) {
+    return '<p class="empty-state">No messages yet.</p>';
+  }
+
+  return [...caseItem.messages]
+    .sort((a, b) => a.createdAt - b.createdAt)
+    .map((message) => {
+      const roleClass = message.sender === "specialist" ? "specialist" : "operator";
+      const time = new Date(message.createdAt).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      return `
+        <article class="operator-thread-row ${roleClass}">
+          <div class="operator-thread-meta">
+            <strong>${safeText(message.sender)}</strong>
+            <span>${safeText(message.kind)}</span>
+            <span>${safeText(time)}</span>
+          </div>
+          <p>${safeText(message.text)}</p>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderOperatorDetail() {
+  if (!operatorDetailEl) {
+    return;
+  }
+
+  const caseItem = selectedOperatorCase();
+
+  if (!caseItem) {
+    operatorDetailEl.innerHTML = '<p class="empty-state">Select an escalated case to communicate.</p>';
+    return;
+  }
+
+  operatorDetailEl.innerHTML = `
+    <div class="op-detail-head">
+      <div>
+        <strong>${safeText(caseItem.patientName)}</strong>
+        <p>${safeText(caseItem.id)} • ${safeText(caseItem.patientAge)}${safeText(caseItem.sex)}</p>
+      </div>
+      <div>
+        <span class="op-urgency-pill">${safeText(caseItem.urgency)}</span>
+        <span class="op-status-pill ${safeText(caseItem.status)}">${safeText(
+          String(caseItem.status).replaceAll("_", " "),
+        )}</span>
+      </div>
+    </div>
+
+    <section class="op-block">
+      <h3>Specialist Reviewed Advice</h3>
+      <p>${safeText(caseItem.reviewedAdvice || "No reviewed advice sent yet.")}</p>
+    </section>
+
+    <section class="op-block">
+      <h3>Selected Care Pathway</h3>
+      <p>${safeText(caseItem.selectedCarePathway || "Not selected yet.")}</p>
+    </section>
+
+    <section class="op-block">
+      <h3>Two-Way Communication</h3>
+      <div class="operator-thread">${renderOperatorThread(caseItem)}</div>
+      <textarea class="operator-input" id="operatorQuestionInput" placeholder="Ask specialist for review or reply with clarification..."></textarea>
+      <div class="operator-actions">
+        <button class="ghost" data-op-action="send-question">Send Question</button>
+        <button class="ghost" data-op-action="send-clarification">Send Clarification Reply</button>
+        <button class="ghost" data-op-action="mark-closed">Close Case</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderOperatorPanel() {
+  renderOperatorQueue();
+  renderOperatorDetail();
+}
+
+async function operatorApi(path, method = "GET", body) {
+  const response = await fetch(path, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload.error || "Operator workflow request failed.");
+  }
+
+  return payload;
+}
+
+async function loadOperatorCases() {
+  if (!operatorQueueEl || !operatorDetailEl) {
+    return;
+  }
+
+  const payload = await operatorApi("/api/specialist/cases");
+  operatorState.cases = payload.cases || [];
+  operatorState.selectedCaseId = operatorState.cases[0]?.id || null;
+  renderOperatorPanel();
+}
+
+function connectOperatorStream() {
+  if (!operatorQueueEl || !operatorDetailEl) {
+    return;
+  }
+
+  const stream = new EventSource("/api/specialist/stream");
+
+  stream.addEventListener("case_updated", (event) => {
+    const caseItem = JSON.parse(event.data);
+    upsertOperatorCase(caseItem);
+    renderOperatorPanel();
+  });
+}
+
+async function postOperatorMessage(kind) {
+  const caseItem = selectedOperatorCase();
+
+  if (!caseItem) {
+    return;
+  }
+
+  const inputEl = document.getElementById("operatorQuestionInput");
+  const text = String(inputEl?.value || "").trim();
+
+  if (!text) {
+    alert("Write a message first.");
+    return;
+  }
+
+  await operatorApi(`/api/specialist/cases/${caseItem.id}/messages`, "POST", {
+    sender: "operator",
+    kind,
+    text,
+  });
+
+  if (inputEl) {
+    inputEl.value = "";
+  }
 }
 
 function arrayBufferToBase64(buffer) {
@@ -469,10 +685,67 @@ transcriptionToggleButton.addEventListener("click", () => {
   startTranscription();
 });
 
+document.addEventListener("click", async (event) => {
+  const queueItem = event.target.closest("[data-op-case-id]");
+
+  if (queueItem?.dataset.opCaseId) {
+    operatorState.selectedCaseId = queueItem.dataset.opCaseId;
+    renderOperatorPanel();
+    return;
+  }
+
+  const actionEl = event.target.closest("[data-op-action]");
+
+  if (!actionEl) {
+    return;
+  }
+
+  try {
+    if (actionEl.dataset.opAction === "send-question") {
+      const caseItem = selectedOperatorCase();
+
+      if (!caseItem) {
+        return;
+      }
+
+      await operatorApi(`/api/specialist/cases/${caseItem.id}/status`, "PATCH", {
+        status: "waiting_for_review",
+      });
+      await postOperatorMessage("question");
+      return;
+    }
+
+    if (actionEl.dataset.opAction === "send-clarification") {
+      await postOperatorMessage("clarification_reply");
+      return;
+    }
+
+    if (actionEl.dataset.opAction === "mark-closed") {
+      const caseItem = selectedOperatorCase();
+
+      if (!caseItem) {
+        return;
+      }
+
+      await operatorApi(`/api/specialist/cases/${caseItem.id}/status`, "PATCH", {
+        status: "case_closed",
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    alert(error.message || "Failed to send operator update.");
+  }
+});
+
 document.addEventListener("keydown", (event) => {
   const activeElement = document.activeElement;
   const isEditingBubble =
-    activeElement && activeElement.classList && activeElement.classList.contains("bubble-edit");
+    activeElement &&
+    activeElement.classList &&
+    (activeElement.classList.contains("bubble-edit") ||
+      activeElement.tagName === "TEXTAREA" ||
+      activeElement.tagName === "INPUT" ||
+      activeElement.isContentEditable);
 
   if (event.code !== "Space" || isEditingBubble) {
     return;
@@ -484,3 +757,6 @@ document.addEventListener("keydown", (event) => {
 
 setActiveSpeaker(currentSpeaker);
 ensureEmptyState();
+loadOperatorCases().then(connectOperatorStream).catch((error) => {
+  console.error(error);
+});

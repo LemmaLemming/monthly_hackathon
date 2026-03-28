@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Healthlink Specialist Review Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/specialist/styles.css" />
+  </head>
+  <body>
+    <main class="dashboard-shell">
+      <header class="topbar">
+        <div>
+          <p class="brand">Healthlink</p>
+          <h1>Specialist Review Dashboard</h1>
+          <p class="subtitle">Human-in-the-loop triage review for escalated cases</p>
+        </div>
+        <div class="topbar-status">
+          <span class="live-dot" id="streamDot"></span>
+          <span id="streamState">Connecting...</span>
+        </div>
+      </header>
+
+      <section class="dashboard-grid">
+        <aside class="queue-column">
+          <div class="panel-head">
+            <h2>Escalated Queue</h2>
+            <span id="queueCount">0</span>
+          </div>
+          <div id="queueList" class="queue-list"></div>
+        </aside>
+
+        <section class="detail-column">
+          <div id="emptyState" class="empty-state">Select a case from the queue to begin review.</div>
+          <div id="caseDetail" class="case-detail" hidden></div>
+        </section>
+      </section>
+    </main>
+
+    <script type="module" src="/specialist/app.js"></script>
+  </body>
+</html>
