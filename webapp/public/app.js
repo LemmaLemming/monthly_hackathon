@@ -14,7 +14,7 @@ let hasSentAudio = false;
 let isTranscribing = false;
 let currentSpeaker = "patient";
 let draftMessage = null;
-let committedHistoryWords = [];
+let sessionCommittedText = "";
 
 function setConnectionState(state) {
   connectionStateEl.textContent = state;
@@ -187,64 +187,17 @@ function appendCommittedText(text) {
   scrollTranscriptToBottom();
 }
 
-function getWordTokens(text) {
-  return Array.from(text.matchAll(/\b[\p{L}\p{N}']+\b/gu), (match) => ({
-    value: match[0].toLowerCase(),
-    index: match.index,
-  }));
-}
-
-function getOverlapWordCount(historyWords, incomingWords) {
-  const maxOverlap = Math.min(historyWords.length, incomingWords.length);
-
-  for (let overlap = maxOverlap; overlap > 0; overlap -= 1) {
-    let matches = true;
-
-    for (let i = 0; i < overlap; i += 1) {
-      if (historyWords[historyWords.length - overlap + i] !== incomingWords[i]) {
-        matches = false;
-        break;
-      }
-    }
-
-    if (matches) {
-      return overlap;
-    }
-  }
-
-  return 0;
-}
-
 function normalizeIncomingTranscript(text) {
   const incoming = (text || "").trim();
-
-  if (!incoming) {
-    return "";
+  if (!incoming) return "";
+  if (sessionCommittedText && incoming.startsWith(sessionCommittedText)) {
+    return incoming.slice(sessionCommittedText.length).trimStart();
   }
-
-  const incomingTokens = getWordTokens(incoming);
-  const incomingWords = incomingTokens.map((token) => token.value);
-  const overlapWordCount = getOverlapWordCount(committedHistoryWords, incomingWords);
-
-  if (overlapWordCount === 0) {
-    return incoming;
-  }
-
-  if (overlapWordCount >= incomingTokens.length) {
-    return "";
-  }
-
-  return incoming.slice(incomingTokens[overlapWordCount].index).trimStart();
+  return incoming;
 }
 
 function rememberCommittedTranscript(text) {
-  const incoming = (text || "").trim();
-
-  if (!incoming) {
-    return;
-  }
-
-  committedHistoryWords = getWordTokens(incoming).map((token) => token.value);
+  sessionCommittedText = (text || "").trim();
 }
 
 function arrayBufferToBase64(buffer) {
@@ -423,7 +376,7 @@ async function stopTranscription() {
 
   ws = null;
   hasSentAudio = false;
-  committedHistoryWords = [];
+  sessionCommittedText = "";
 }
 
 async function startTranscription() {
