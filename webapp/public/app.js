@@ -14,7 +14,7 @@ let hasSentAudio = false;
 let isTranscribing = false;
 let currentSpeaker = "patient";
 let draftMessage = null;
-let transcriptHistory = "";
+let committedHistoryWords = [];
 
 function setConnectionState(state) {
   connectionStateEl.textContent = state;
@@ -187,31 +187,64 @@ function appendCommittedText(text) {
   scrollTranscriptToBottom();
 }
 
+function getWordTokens(text) {
+  return Array.from(text.matchAll(/\b[\p{L}\p{N}']+\b/gu), (match) => ({
+    value: match[0].toLowerCase(),
+    index: match.index,
+  }));
+}
+
+function getOverlapWordCount(historyWords, incomingWords) {
+  const maxOverlap = Math.min(historyWords.length, incomingWords.length);
+
+  for (let overlap = maxOverlap; overlap > 0; overlap -= 1) {
+    let matches = true;
+
+    for (let i = 0; i < overlap; i += 1) {
+      if (historyWords[historyWords.length - overlap + i] !== incomingWords[i]) {
+        matches = false;
+        break;
+      }
+    }
+
+    if (matches) {
+      return overlap;
+    }
+  }
+
+  return 0;
+}
+
 function normalizeIncomingTranscript(text) {
   const incoming = (text || "").trim();
-  const history = transcriptHistory.trim();
 
   if (!incoming) {
     return "";
   }
 
-  if (history && incoming.startsWith(history)) {
-    return incoming.slice(history.length).trimStart();
+  const incomingTokens = getWordTokens(incoming);
+  const incomingWords = incomingTokens.map((token) => token.value);
+  const overlapWordCount = getOverlapWordCount(committedHistoryWords, incomingWords);
+
+  if (overlapWordCount === 0) {
+    return incoming;
   }
 
-  return incoming;
+  if (overlapWordCount >= incomingTokens.length) {
+    return "";
+  }
+
+  return incoming.slice(incomingTokens[overlapWordCount].index).trimStart();
 }
 
 function rememberCommittedTranscript(text) {
-  const normalized = normalizeIncomingTranscript(text);
+  const incoming = (text || "").trim();
 
-  if (!normalized) {
+  if (!incoming) {
     return;
   }
 
-  transcriptHistory = transcriptHistory
-    ? `${transcriptHistory} ${normalized}`.trim()
-    : normalized;
+  committedHistoryWords = getWordTokens(incoming).map((token) => token.value);
 }
 
 function arrayBufferToBase64(buffer) {
@@ -390,7 +423,7 @@ async function stopTranscription() {
 
   ws = null;
   hasSentAudio = false;
-  transcriptHistory = "";
+  committedHistoryWords = [];
 }
 
 async function startTranscription() {
