@@ -1,0 +1,101 @@
+din,drug_name,generic_name,drug_class,common_indication,typical_dosage,route,schedule
+02717542,metformin,metformin,Biguanide,Type 2 diabetes,500mg,oral,Prescription
+02647786,lisinopril,lisinopril,ACE inhibitor,Hypertension,5mg,oral,Prescription
+02717447,atorvastatin,atorvastatin,Statin,Hyperlipidemia,10mg,oral,Prescription
+02345205,levothyroxine,levothyroxine,Thyroid hormone,Hypothyroidism,25mcg,oral,Prescription
+02964307,amlodipine,amlodipine,Calcium channel blocker,Hypertension,5mg,oral,Prescription
+02195105,omeprazole,omeprazole,Proton pump inhibitor,GERD,20mg,oral,OTC
+02942168,salbutamol,salbutamol,Short-acting beta-agonist,Asthma,100mcg/puff,inhaled,Prescription
+02341585,rosuvastatin,rosuvastatin,Statin,Hyperlipidemia,5mg,oral,Prescription
+02347018,ramipril,ramipril,ACE inhibitor,Hypertension,2.5mg,oral,Prescription
+02821256,pantoprazole,pantoprazole,Proton pump inhibitor,GERD,20mg,oral,Prescription
+02453786,metoprolol,metoprolol,Beta blocker,Hypertension,25mg,oral,Prescription
+02036584,hydrochlorothiazide,hydrochlorothiazide,Thiazide diuretic,Hypertension,12.5mg,oral,Prescription
+02818461,sertraline,sertraline,SSRI antidepressant,Depression,25mg,oral,Prescription
+02854562,escitalopram,escitalopram,SSRI antidepressant,"Depression, anxiety",5mg,oral,Prescription
+02405413,gabapentin,gabapentin,Anticonvulsant,"Neuropathic pain, epilepsy",100mg,oral,Prescription
+02273375,amoxicillin,amoxicillin,Penicillin antibiotic,Bacterial infections,250mg,oral,Prescription
+02898243,azithromycin,azithromycin,Macrolide antibiotic,Bacterial infections,250mg,oral,Prescription
+02759598,prednisone,prednisone,Corticosteroid,Inflammation,5mg,oral,Prescription
+02004916,acetaminophen,acetaminophen,Analgesic/antipyretic,"Pain, fever",325mg,oral,OTC
+02559698,ibuprofen,ibuprofen,NSAID,"Pain, inflammation",200mg,oral,OTC
+02494267,warfarin,warfarin,Vitamin K antagonist,Anticoagulation,1mg,oral,Prescription
+02410333,insulin glargine,insulin glargine,Long-acting insulin,Diabetes,10 units,subcutaneous,Prescription
+02730928,sitagliptin,sitagliptin,DPP-4 inhibitor,Type 2 diabetes,25mg,oral,Prescription
+02661098,clopidogrel,clopidogrel,Antiplatelet,Cardiovascular prevention,75mg,oral,Prescription
+02105093,furosemide,furosemide,Loop diuretic,"Edema, heart failure",20mg,oral,Prescription
+02927411,cephalexin,cephalexin,Cephalosporin antibiotic,Bacterial infections,500mg QID,oral,Prescription
+02014242,ciprofloxacin,ciprofloxacin,Fluoroquinolone antibiotic,Bacterial infections,500mg BID,oral,Prescription
+02664827,doxycycline,doxycycline,Tetracycline antibiotic,Bacterial infections,100mg BID,oral,Prescription
+02951817,fluconazole,fluconazole,Antifungal,Fungal infections,150mg once,oral,Prescription
+02037897,clindamycin,clindamycin,Lincosamide antibiotic,Bacterial infections,300mg QID,oral,Prescription
+02511748,diclofenac,diclofenac,NSAID,"Pain, inflammation",50mg TID,oral,Prescription
+02011941,naproxen,naproxen,NSAID,"Pain, inflammation",250mg BID,oral,OTC
+02946957,celecoxib,celecoxib,COX-2 inhibitor,"Pain, arthritis",200mg daily,oral,Prescription
+02934870,morphine,morphine sulfate,Opioid analgesic,Severe pain,15mg Q4H,oral,Controlled
+02454714,hydromorphone,hydromorphone,Opioid analgesic,Severe pain,2mg Q4H,oral,Controlled
+02196977,oxycodone,oxycodone,Opioid analgesic,Moderate-severe pain,5mg Q6H,oral,Controlled
+02516613,codeine,codeine phosphate,Opioid analgesic,Mild-moderate pain,30mg Q4H,oral,Controlled
+02878702,tramadol,tramadol,Opioid analgesic,Moderate pain,50mg Q6H,oral,Prescription
+02002879,duloxetine,duloxetine,SNRI antidepressant,"Depression, neuropathic pain",60mg daily,oral,Prescription
+02753489,venlafaxine,venlafaxine,SNRI antidepressant,"Depression, anxiety",75mg daily,oral,Prescription
+02777598,fluoxetine,fluoxetine,SSRI antidepressant,"Depression, OCD",20mg daily,oral,Prescription
+02924241,paroxetine,paroxetine,SSRI antidepressant,"Depression, anxiety",20mg daily,oral,Prescription
+02114488,citalopram,citalopram,SSRI antidepressant,Depression,20mg daily,oral,Prescription
+02298925,mirtazapine,mirtazapine,Tetracyclic antidepressant,Depression,15mg at bedtime,oral,Prescription
+02577027,trazodone,trazodone,SARI antidepressant,"Depression, insomnia",50mg at bedtime,oral,Prescription
+02270581,quetiapine,quetiapine,Atypical antipsychotic,"Schizophrenia, bipolar",100mg BID,oral,Prescription
+02334798,risperidone,risperidone,Atypical antipsychotic,Schizophrenia,2mg daily,oral,Prescription
+02869261,lorazepam,lorazepam,Benzodiazepine,"Anxiety, insomnia",1mg PRN,oral,Controlled
+02181033,clonazepam,clonazepam,Benzodiazepine,"Seizures, anxiety",0.5mg BID,oral,Controlled
+02202621,zopiclone,zopiclone,Cyclopyrrolone hypnotic,Insomnia,7.5mg at bedtime,oral,Prescription
+02403290,pregabalin,pregabalin,Anticonvulsant,"Neuropathic pain, anxiety",75mg BID,oral,Prescription
+02634468,topiramate,topiramate,Anticonvulsant,"Epilepsy, migraine prevention",50mg BID,oral,Prescription
+02539546,valproic acid,valproic acid,Anticonvulsant,"Epilepsy, bipolar",500mg BID,oral,Prescription
+02029847,levetiracetam,levetiracetam,Anticonvulsant,Epilepsy,500mg BID,oral,Prescription
+02844295,allopurinol,allopurinol,Xanthine oxidase inhibitor,Gout,300mg daily,oral,Prescription
+02785663,colchicine,colchicine,Anti-gout,Gout,0.6mg BID,oral,Prescription
+02088751,montelukast,montelukast,Leukotriene inhibitor,"Asthma, allergies",10mg daily,oral,Prescription
+02373929,cetirizine,cetirizine,Antihistamine,Allergies,10mg daily,oral,OTC
+02853662,loratadine,loratadine,Antihistamine,Allergies,10mg daily,oral,OTC
+02292720,diphenhydramine,diphenhydramine,Antihistamine,"Allergies, insomnia",25mg Q6H,oral,OTC
+02763207,ranitidine,ranitidine,H2 blocker,"GERD, peptic ulcer",150mg BID,oral,OTC
+02520197,domperidone,domperidone,Prokinetic,"Nausea, gastroparesis",10mg TID,oral,Prescription
+02484974,ondansetron,ondansetron,5-HT3 antagonist,"Nausea, vomiting",4mg PRN,oral,Prescription
+02877629,metoclopramide,metoclopramide,Prokinetic,"Nausea, GERD",10mg TID,oral,Prescription
+02873984,bisoprolol,bisoprolol,Beta blocker,"Hypertension, heart failure",5mg daily,oral,Prescription
+02855393,candesartan,candesartan,ARB,Hypertension,16mg daily,oral,Prescription
+02396439,valsartan,valsartan,ARB,"Hypertension, heart failure",80mg daily,oral,Prescription
+02262729,irbesartan,irbesartan,ARB,Hypertension,150mg daily,oral,Prescription
+02602571,diltiazem,diltiazem,Calcium channel blocker,"Hypertension, angina",180mg daily,oral,Prescription
+02732662,spironolactone,spironolactone,Potassium-sparing diuretic,"Heart failure, hypertension",25mg daily,oral,Prescription
+02320254,apixaban,apixaban,DOAC anticoagulant,"Atrial fibrillation, DVT",5mg BID,oral,Prescription
+02622594,rivaroxaban,rivaroxaban,DOAC anticoagulant,"Atrial fibrillation, DVT",20mg daily,oral,Prescription
+02266171,ASA (aspirin),acetylsalicylic acid,NSAID / antiplatelet,"Pain, cardiovascular prevention",81mg daily,oral,OTC
+02969428,nitroglycerin,nitroglycerin,Nitrate vasodilator,Angina,0.4mg SL PRN,sublingual,Prescription
+02503183,empagliflozin,empagliflozin,SGLT2 inhibitor,"Type 2 diabetes, heart failure",10mg daily,oral,Prescription
+02855812,liraglutide,liraglutide,GLP-1 receptor agonist,Type 2 diabetes,1.2mg daily,subcutaneous,Prescription
+02991476,gliclazide,gliclazide,Sulfonylurea,Type 2 diabetes,80mg daily,oral,Prescription
+02094449,insulin aspart,insulin aspart,Rapid-acting insulin,Diabetes,variable,subcutaneous,Prescription
+02292600,tiotropium,tiotropium,Anticholinergic bronchodilator,COPD,18mcg inhaled daily,inhaled,Prescription
+02821946,fluticasone/salmeterol,fluticasone/salmeterol,ICS/LABA,"Asthma, COPD",250/50mcg BID,inhaled,Prescription
+02725499,budesonide,budesonide,Inhaled corticosteroid,Asthma,200mcg BID,inhaled,Prescription
+02511021,tamsulosin,tamsulosin,Alpha blocker,BPH,0.4mg daily,oral,Prescription
+02819510,finasteride,finasteride,5-alpha reductase inhibitor,BPH,5mg daily,oral,Prescription
+02150420,sildenafil,sildenafil,PDE5 inhibitor,Erectile dysfunction,50mg PRN,oral,Prescription
+02160188,methotrexate,methotrexate,DMARD,Rheumatoid arthritis,15mg weekly,oral,Prescription
+02773301,hydroxychloroquine,hydroxychloroquine,DMARD,"Rheumatoid arthritis, lupus",200mg BID,oral,Prescription
+02382395,cyclobenzaprine,cyclobenzaprine,Muscle relaxant,Muscle spasm,10mg TID,oral,Prescription
+02445201,baclofen,baclofen,Muscle relaxant,Muscle spasticity,10mg TID,oral,Prescription
+02572635,sumatriptan,sumatriptan,Triptan,Migraine,50mg PRN,oral,Prescription
+02969347,amitriptyline,amitriptyline,Tricyclic antidepressant,"Depression, neuropathic pain",25mg at bedtime,oral,Prescription
+02546955,nortriptyline,nortriptyline,Tricyclic antidepressant,"Depression, neuropathic pain",25mg at bedtime,oral,Prescription
+02198172,methylphenidate,methylphenidate,CNS stimulant,ADHD,10mg BID,oral,Controlled
+02951063,beclomethasone,beclomethasone,Nasal corticosteroid,Allergic rhinitis,100mcg/spray BID,nasal,Prescription
+02343090,latanoprost,latanoprost,Prostaglandin analog,Glaucoma,1 drop at bedtime,ophthalmic,Prescription
+02349356,timolol ophthalmic,timolol,Beta blocker (ophthalmic),Glaucoma,1 drop BID,ophthalmic,Prescription
+02349798,betamethasone cream,betamethasone valerate,Topical corticosteroid,"Eczema, dermatitis",Apply BID,topical,Prescription
+02375914,mupirocin ointment,mupirocin,Topical antibiotic,Skin infections,Apply TID,topical,Prescription
+02226529,ferrous sulfate,ferrous sulfate,Iron supplement,Iron deficiency anemia,300mg daily,oral,OTC
+02193027,calcium carbonate,calcium carbonate,Calcium supplement,Calcium supplementation,500mg BID,oral,OTC
+02118995,vitamin D3,cholecalciferol,Vitamin,Vitamin D deficiency,1000 IU daily,oral,OTC

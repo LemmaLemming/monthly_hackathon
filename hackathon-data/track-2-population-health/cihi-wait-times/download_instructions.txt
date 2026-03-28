@@ -1,0 +1,69 @@
+CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=CIHI Wait Times Data — Download Instructions
+=
+
+To get real CIHI wait times data (Excel format):
+
+1. Go to: https://www.cihi.ca/en/topics/access-and-wait-times/data-tables
+2. Select the procedure of interest (e.g., Hip Replacement, Knee Replacement)
+3. Choose the data table format (XLSX)
+4. Download and save to this directory
+
+Available tables include:
+  - Wait Times for Hip and Knee Replacements
+  - Wait Times for Cataract Surgery
+  - Wait Times for Radiation Therapy
+  - Wait Times for Hip Fracture Repair
+  - Wait Times for Diagnostic Imaging (CT, MRI)
+  - Wait Times for Cardiac Bypass Surgery
+
+Note: CIHI data requires free registration. The mock data in
+wait_times_mock.csv mirrors the structure and realistic trends.

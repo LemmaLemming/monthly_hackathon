@@ -1,0 +1,112 @@
+{
+  "resourceType": "Encounter",
+  "id": "example-emergency-encounter",
+  "meta": {
+    "profile": [
+      "http://hl7.org/fhir/ca/core/StructureDefinition/profile-encounter"
+    ]
+  },
+  "identifier": [
+    {
+      "use": "official",
+      "system": "https://fhir.viha.ca/encounter-id",
+      "value": "ENC-0000001"
+    }
+  ],
+  "status": "finished",
+  "class": {
+    "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+    "code": "EMER",
+    "display": "emergency"
+  },
+  "type": [
+    {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "50849002",
+          "display": "Emergency department patient visit"
+        }
+      ]
+    }
+  ],
+  "subject": {
+    "reference": "Patient/example-canadian-patient",
+    "display": "Marie Claire Tremblay"
+  },
+  "participant": [
+    {
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+              "code": "ATND",
+              "display": "attender"
+            }
+          ]
+        }
+      ],
+      "individual": {
+        "reference": "Practitioner/dr-chen-jubilee",
+        "display": "Dr. Wei Chen"
+      }
+    }
+  ],
+  "period": {
+    "start": "2025-11-15T08:30:00-08:00",
+    "end": "2025-11-15T14:45:00-08:00"
+  },
+  "reasonCode": [
+    {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "29857009",
+          "display": "Chest pain"
+        }
+      ]
+    }
+  ],
+  "diagnosis": [
+    {
+      "condition": {
+        "reference": "Condition/example-mi",
+        "display": "Acute myocardial infarction"
+      },
+      "use": {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/diagnosis-role",
+            "code": "AD",
+            "display": "Admission diagnosis"
+          }
+        ]
+      }
+    }
+  ],
+  "hospitalization": {
+    "dischargeDisposition": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/discharge-disposition",
+          "code": "home",
+          "display": "Home"
+        }
+      ]
+    }
+  },
+  "location": [
+    {
+      "location": {
+        "reference": "Location/rjh-emergency",
+        "display": "Royal Jubilee Hospital - Emergency Department"
+      },
+      "status": "completed"
+    }
+  ],
+  "serviceProvider": {
+    "reference": "Organization/island-health",
+    "display": "Island Health Authority"
+  }
+}
