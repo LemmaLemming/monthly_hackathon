@@ -30,6 +30,8 @@ const expectedPasswordHash = isAuthConfigured
   ? crypto.scryptSync(AUTH_PASSWORD, AUTH_SCRYPT_SALT, 64)
   : null;
 const publicDir = path.join(__dirname, "public");
+const loginPagePath = path.join(publicDir, "index.html");
+const dispatcherPagePath = path.join(publicDir, "dispatcher.html");
 const physiciansPortalDir = path.join(__dirname, "..", "physicians-portal", "public");
 
 if (!process.env.ELEVENLABS_API_KEY) {
@@ -264,7 +266,7 @@ function redirectToLogin(res, nextPath) {
   res.redirect(target);
 }
 
-function requirePhysicianPortalAuth(req, res, next) {
+function requirePageAuth(req, res, next) {
   if (!isAuthConfigured) {
     if (isHtmlNavigationRequest(req)) {
       redirectToLogin(res, req.originalUrl);
@@ -347,8 +349,23 @@ app.post("/api/auth/logout", (_req, res) => {
   res.json({ ok: true });
 });
 
-app.use(express.static(publicDir));
-app.use("/physicians-portal", requirePhysicianPortalAuth, express.static(physiciansPortalDir));
+app.get("/", (req, res) => {
+  if (req.authSession) {
+    const nextPath = typeof req.query.next === "string" ? req.query.next : "";
+    const redirectTarget = nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/dispatcher";
+    res.redirect(redirectTarget);
+    return;
+  }
+
+  res.sendFile(loginPagePath);
+});
+
+app.get("/dispatcher", requirePageAuth, (_req, res) => {
+  res.sendFile(dispatcherPagePath);
+});
+
+app.use(express.static(publicDir, { index: false }));
+app.use("/physicians-portal", requirePageAuth, express.static(physiciansPortalDir));
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true });

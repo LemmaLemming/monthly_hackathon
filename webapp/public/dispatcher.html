@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Healthline Dispatcher Transcription Interface</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">Healthline</p>
+          <h1>Dispatcher Transcription Interface</h1>
+          <p class="header-copy">
+            Press <kbd>SPACE</kbd> to switch the upcoming live transcript between
+            Patient and Dispatcher.
+          </p>
+        </div>
+
+        <div class="header-actions">
+          <div class="header-status session-status">
+            <span id="sessionUserLabel">Signed in</span>
+            <span class="divider">•</span>
+            <button id="logoutButton" type="button" class="ghost compact-button">Log Out</button>
+          </div>
+
+          <div class="header-status">
+            <span class="status-dot" id="liveDot"></span>
+            <span id="connectionState">Idle</span>
+            <span class="divider">•</span>
+            <span id="activeSpeakerLabel">Patient</span>
+          </div>
+
+          <div class="action-row">
+            <button id="transcriptionToggle" class="secondary">Start Transcription</button>
+            <button id="addPhysicianButton" class="primary">Add Physician</button>
+            <button id="endCallButton" class="danger">End Call</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="workspace-grid">
+        <section class="transcript-shell">
+          <div class="transcript-toolbar">
+            <div>
+              <span class="toolbar-label">Active stream</span>
+              <strong>Realtime Scribe</strong>
+            </div>
+            <div>
+              <span class="toolbar-label">Input</span>
+              <strong id="sampleRate">16000 Hz mono PCM</strong>
+            </div>
+          </div>
+
+          <div id="transcriptStream" class="transcript-stream"></div>
+        </section>
+
+        <aside class="summary-shell">
+          <div class="panel-header">
+            <div>
+              <span class="toolbar-label">AI Consultation Brief</span>
+              <strong>Prepare Handoff</strong>
+            </div>
+            <button id="summaryButton" class="ghost">Generate AI Summary</button>
+          </div>
+
+          <textarea
+            id="summaryOutput"
+            class="summary-box"
+            spellcheck="true"
+          >Patient Profile
+Chief Complaint
+Duration
+Pain Radiation
+Associated Symptoms
+Potential Mimics
+Current Status</textarea>
+          <button id="sendSummaryButton" class="primary wide-button">
+            Send AI Summary To Physician
+          </button>
+        </aside>
+
+        <aside class="consult-shell">
+          <div class="panel-header">
+            <div>
+              <span class="toolbar-label">Clinical Consultation</span>
+              <strong>Physician Response</strong>
+            </div>
+            <a class="portal-link" href="/physicians-portal/" target="_blank" rel="noreferrer">
+              Open Physician Portal
+            </a>
+          </div>
+
+          <section class="physician-card">
+            <div class="physician-avatar" aria-hidden="true">AT</div>
+            <div class="physician-identity">
+              <strong>Dr. Aris Thorne</strong>
+              <p><span class="availability-dot"></span> STATUS: AVAILABLE</p>
+            </div>
+          </section>
+
+          <section id="consultationFeed" class="consultation-feed"></section>
+
+          <form id="physicianReplyForm" class="consultation-composer">
+            <label class="sr-only" for="physicianReplyInput">Reply to physician</label>
+            <textarea
+              id="physicianReplyInput"
+              class="consultation-input"
+              rows="2"
+              placeholder="Type quick notes..."
+            ></textarea>
+            <div class="consultation-actions">
+              <button type="button" id="voiceToTextButton" class="icon-button" aria-label="Voice to text">
+                Mic
+              </button>
+              <button type="submit" class="secondary">Reply</button>
+            </div>
+          </form>
+        </aside>
+      </section>
+    </main>
+
+    <div id="endCallModal" class="modal-shell" hidden>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="endCallTitle">
+        <div class="modal-header">
+          <div>
+            <span class="toolbar-label">Post-Call Guidance</span>
+            <strong id="endCallTitle">Patient Follow-Up Summary</strong>
+          </div>
+          <button type="button" id="closeEndCallModalButton" class="ghost">Close</button>
+        </div>
+
+        <p class="modal-copy">
+          AI-generated next steps for the patient after the dispatcher ends the call.
+        </p>
+
+        <textarea
+          id="followUpOutput"
+          class="summary-box modal-summary-box"
+          spellcheck="true"
+          placeholder="Follow-up instructions will appear here after the call ends."
+        ></textarea>
+
+        <div class="modal-actions">
+          <button type="button" id="regenerateFollowUpButton" class="ghost">Regenerate</button>
+          <button type="button" id="sendSmsButton" class="primary">Send SMS</button>
+        </div>
+        <p id="smsStatus" class="modal-status">SMS not sent.</p>
+      </div>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

@@ -1,10 +1,3 @@
-const loginShell = document.getElementById("loginShell");
-const appShell = document.getElementById("appShell");
-const loginForm = document.getElementById("loginForm");
-const usernameInput = document.getElementById("usernameInput");
-const passwordInput = document.getElementById("passwordInput");
-const loginButton = document.getElementById("loginButton");
-const loginStatus = document.getElementById("loginStatus");
 const logoutButton = document.getElementById("logoutButton");
 const sessionUserLabel = document.getElementById("sessionUserLabel");
 const transcriptionToggleButton = document.getElementById("transcriptionToggle");
@@ -45,51 +38,9 @@ let consultationMessageIds = new Set();
 let currentSession = null;
 let sessionVerificationPromise = null;
 
-function setLoginStatus(message, isError = false) {
-  loginStatus.textContent = message;
-  loginStatus.dataset.state = isError ? "error" : "info";
-}
-
-function setLoginAvailability(isEnabled) {
-  usernameInput.disabled = !isEnabled;
-  passwordInput.disabled = !isEnabled;
-  loginButton.disabled = !isEnabled;
-}
-
-function showLoginView(message = "Sign in to continue.", isError = false) {
-  currentSession = null;
-  loginShell.hidden = false;
-  appShell.hidden = true;
-  document.body.classList.remove("app-authenticated");
-  setLoginStatus(message, isError);
-}
-
-function showAppView(session) {
-  currentSession = session;
-  loginShell.hidden = true;
-  appShell.hidden = false;
-  document.body.classList.add("app-authenticated");
-  sessionUserLabel.textContent = `Signed in as ${session.username}`;
-}
-
-function getNextPath() {
-  const next = new URLSearchParams(window.location.search).get("next") || "";
-
-  if (!next.startsWith("/") || next.startsWith("//")) {
-    return "";
-  }
-
-  return next;
-}
-
-function clearNextPath() {
-  const nextPath = getNextPath();
-
-  if (!nextPath) {
-    return;
-  }
-
-  window.history.replaceState({}, "", window.location.pathname);
+function getLoginRedirectTarget() {
+  const next = `${window.location.pathname}${window.location.search}`;
+  return `/?next=${encodeURIComponent(next)}`;
 }
 
 async function readJsonResponse(response) {
@@ -125,11 +76,10 @@ async function teardownAuthenticatedState() {
   liveDotEl.classList.remove("live");
 }
 
-async function handleSignedOut(message = "Your session ended. Sign in again.", isError = true) {
+async function handleSignedOut() {
   await teardownAuthenticatedState();
-  showLoginView(message, isError);
-  passwordInput.value = "";
-  usernameInput.focus();
+  currentSession = null;
+  window.location.replace(getLoginRedirectTarget());
 }
 
 async function authFetch(url, options = {}) {
@@ -139,16 +89,15 @@ async function authFetch(url, options = {}) {
   });
 
   if (response.status === 401) {
-    const payload = await readJsonResponse(response);
-    await handleSignedOut(payload.error || "Your session ended. Sign in again.");
-    throw new Error(payload.error || "Authentication required.");
+    await readJsonResponse(response);
+    await handleSignedOut();
+    throw new Error("Authentication required.");
   }
 
   if (response.status === 503) {
-    const payload = await readJsonResponse(response);
-    showLoginView(payload.error || "Login is unavailable.", true);
-    setLoginAvailability(false);
-    throw new Error(payload.error || "Login is unavailable.");
+    await readJsonResponse(response);
+    await handleSignedOut();
+    throw new Error("Login is unavailable.");
   }
 
   return response;
@@ -168,16 +117,16 @@ async function verifyActiveSession() {
 
       if (response.ok) {
         currentSession = payload;
+        sessionUserLabel.textContent = `Signed in as ${payload.username}`;
         return true;
       }
 
       if (response.status === 401) {
-        await handleSignedOut(payload.error || "Your session ended. Sign in again.");
+        await handleSignedOut();
         return false;
       }
 
-      showLoginView(payload.error || "Login is unavailable.", true);
-      setLoginAvailability(false);
+      await handleSignedOut();
       return false;
     } catch (error) {
       console.error(error);
@@ -198,37 +147,21 @@ async function loadCurrentSession() {
     const payload = await readJsonResponse(response);
 
     if (response.ok) {
-      setLoginAvailability(true);
+      sessionUserLabel.textContent = `Signed in as ${payload.username}`;
       return payload;
     }
 
-    if (response.status === 503) {
-      setLoginAvailability(false);
-      showLoginView(payload.error || "Login is unavailable.", true);
-      return null;
-    }
-
-    setLoginAvailability(true);
-    showLoginView("Sign in to continue.");
+    await handleSignedOut();
     return null;
   } catch (error) {
     console.error(error);
-    setLoginAvailability(true);
-    showLoginView("Unable to reach the server.", true);
     return null;
   }
 }
 
 async function enterAuthenticatedApp(session) {
-  showAppView(session);
-
-  const nextPath = getNextPath();
-  if (nextPath && nextPath !== "/") {
-    window.location.replace(nextPath);
-    return;
-  }
-
-  clearNextPath();
+  currentSession = session;
+  sessionUserLabel.textContent = `Signed in as ${session.username}`;
   await loadConsultationHistory();
   connectConsultationStream();
 }
@@ -978,43 +911,6 @@ function toggleSpeaker() {
   }, 300);
 }
 
-loginForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  setLoginAvailability(false);
-  setLoginStatus("Signing in...");
-
-  try {
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        username: usernameInput.value.trim(),
-        password: passwordInput.value,
-      }),
-    });
-    const payload = await readJsonResponse(response);
-
-    if (!response.ok) {
-      setLoginAvailability(response.status !== 503);
-      setLoginStatus(payload.error || "Unable to sign in.", true);
-      passwordInput.value = "";
-      return;
-    }
-
-    setLoginAvailability(true);
-    passwordInput.value = "";
-    setLoginStatus("Signed in.");
-    await enterAuthenticatedApp(payload);
-  } catch (error) {
-    console.error(error);
-    setLoginAvailability(true);
-    setLoginStatus(error.message || "Unable to sign in.", true);
-  }
-});
-
 logoutButton.addEventListener("click", async () => {
   logoutButton.disabled = true;
 
@@ -1027,11 +923,9 @@ logoutButton.addEventListener("click", async () => {
     console.error(error);
   } finally {
     await teardownAuthenticatedState();
-    clearNextPath();
-    showLoginView("Signed out.");
+    currentSession = null;
     logoutButton.disabled = false;
-    passwordInput.value = "";
-    usernameInput.focus();
+    window.location.assign("/");
   }
 });
 
@@ -1140,11 +1034,9 @@ document.addEventListener("keydown", (event) => {
 async function bootstrapApp() {
   setActiveSpeaker(currentSpeaker);
   ensureEmptyState();
-  showLoginView("Checking session...");
 
   const session = await loadCurrentSession();
   if (!session) {
-    usernameInput.focus();
     return;
   }
 

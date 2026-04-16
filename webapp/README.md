@@ -30,13 +30,14 @@ Minimal Node.js + browser webapp for live microphone transcription with ElevenLa
    npm run dev
    ```
 
-5. Open [http://localhost:3000](http://localhost:3000) and sign in with the shared dispatcher username and password.
+5. Open [http://localhost:3000](http://localhost:3000), sign in with the shared dispatcher username and password, and you will be redirected to `/dispatcher`.
 
 ## Notes
 
 - The server creates a single-use `realtime_scribe` token at `/scribe-token` using `@elevenlabs/elevenlabs-js`.
 - The frontend never receives your ElevenLabs API key directly.
-- The dispatcher app and physician portal now share the same signed-cookie login session.
+- `/` is the login page, `/dispatcher` is the protected dispatcher app, and `/physicians-portal/` is the protected physician portal.
+- The dispatcher app and physician portal share the same signed-cookie login session.
 - The client streams mono 16-bit PCM audio to ElevenLabs at 16kHz, which matches ElevenLabs' recommended realtime STT format.
 
 ## References
