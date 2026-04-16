@@ -13,7 +13,38 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <main class="app-shell">
+    <main id="loginShell" class="login-shell">
+      <section class="login-panel">
+        <p class="eyebrow">Healthline Access</p>
+        <h1>Dispatcher Sign-In</h1>
+        <p class="login-copy">
+          Sign in with the shared dispatcher credentials before opening the live translation console.
+        </p>
+
+        <form id="loginForm" class="login-form">
+          <label class="login-field">
+            <span class="toolbar-label">Username</span>
+            <input id="usernameInput" name="username" type="text" autocomplete="username" required />
+          </label>
+
+          <label class="login-field">
+            <span class="toolbar-label">Password</span>
+            <input
+              id="passwordInput"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+            />
+          </label>
+
+          <button id="loginButton" type="submit" class="primary">Sign In</button>
+          <p id="loginStatus" class="login-status" aria-live="polite">Sign in to continue.</p>
+        </form>
+      </section>
+    </main>
+
+    <main id="appShell" class="app-shell" hidden>
       <header class="app-header">
         <div>
           <p class="eyebrow">Healthline</p>
@@ -25,6 +56,12 @@
         </div>
 
         <div class="header-actions">
+          <div class="header-status session-status">
+            <span id="sessionUserLabel">Signed in</span>
+            <span class="divider">•</span>
+            <button id="logoutButton" type="button" class="ghost compact-button">Log Out</button>
+          </div>
+
           <div class="header-status">
             <span class="status-dot" id="liveDot"></span>
             <span id="connectionState">Idle</span>

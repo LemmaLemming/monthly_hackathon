@@ -1,3 +1,12 @@
+const loginShell = document.getElementById("loginShell");
+const appShell = document.getElementById("appShell");
+const loginForm = document.getElementById("loginForm");
+const usernameInput = document.getElementById("usernameInput");
+const passwordInput = document.getElementById("passwordInput");
+const loginButton = document.getElementById("loginButton");
+const loginStatus = document.getElementById("loginStatus");
+const logoutButton = document.getElementById("logoutButton");
+const sessionUserLabel = document.getElementById("sessionUserLabel");
 const transcriptionToggleButton = document.getElementById("transcriptionToggle");
 const transcriptStreamEl = document.getElementById("transcriptStream");
 const connectionStateEl = document.getElementById("connectionState");
@@ -33,6 +42,196 @@ let draftMessage = null;
 let previousBubbleText = "";
 let sessionCommittedText = "";
 let consultationMessageIds = new Set();
+let currentSession = null;
+let sessionVerificationPromise = null;
+
+function setLoginStatus(message, isError = false) {
+  loginStatus.textContent = message;
+  loginStatus.dataset.state = isError ? "error" : "info";
+}
+
+function setLoginAvailability(isEnabled) {
+  usernameInput.disabled = !isEnabled;
+  passwordInput.disabled = !isEnabled;
+  loginButton.disabled = !isEnabled;
+}
+
+function showLoginView(message = "Sign in to continue.", isError = false) {
+  currentSession = null;
+  loginShell.hidden = false;
+  appShell.hidden = true;
+  document.body.classList.remove("app-authenticated");
+  setLoginStatus(message, isError);
+}
+
+function showAppView(session) {
+  currentSession = session;
+  loginShell.hidden = true;
+  appShell.hidden = false;
+  document.body.classList.add("app-authenticated");
+  sessionUserLabel.textContent = `Signed in as ${session.username}`;
+}
+
+function getNextPath() {
+  const next = new URLSearchParams(window.location.search).get("next") || "";
+
+  if (!next.startsWith("/") || next.startsWith("//")) {
+    return "";
+  }
+
+  return next;
+}
+
+function clearNextPath() {
+  const nextPath = getNextPath();
+
+  if (!nextPath) {
+    return;
+  }
+
+  window.history.replaceState({}, "", window.location.pathname);
+}
+
+async function readJsonResponse(response) {
+  const rawBody = await response.text();
+
+  if (!rawBody) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(rawBody);
+  } catch {
+    return { error: rawBody };
+  }
+}
+
+async function stopConsultationStream() {
+  if (consultationStream) {
+    consultationStream.close();
+    consultationStream = null;
+  }
+}
+
+async function teardownAuthenticatedState() {
+  await stopConsultationStream();
+
+  if (isTranscribing) {
+    await stopTranscription();
+  }
+
+  closeEndCallModal();
+  setConnectionState("Idle");
+  liveDotEl.classList.remove("live");
+}
+
+async function handleSignedOut(message = "Your session ended. Sign in again.", isError = true) {
+  await teardownAuthenticatedState();
+  showLoginView(message, isError);
+  passwordInput.value = "";
+  usernameInput.focus();
+}
+
+async function authFetch(url, options = {}) {
+  const response = await fetch(url, {
+    credentials: "same-origin",
+    ...options,
+  });
+
+  if (response.status === 401) {
+    const payload = await readJsonResponse(response);
+    await handleSignedOut(payload.error || "Your session ended. Sign in again.");
+    throw new Error(payload.error || "Authentication required.");
+  }
+
+  if (response.status === 503) {
+    const payload = await readJsonResponse(response);
+    showLoginView(payload.error || "Login is unavailable.", true);
+    setLoginAvailability(false);
+    throw new Error(payload.error || "Login is unavailable.");
+  }
+
+  return response;
+}
+
+async function verifyActiveSession() {
+  if (sessionVerificationPromise) {
+    return sessionVerificationPromise;
+  }
+
+  sessionVerificationPromise = (async () => {
+    try {
+      const response = await fetch("/api/auth/session", {
+        credentials: "same-origin",
+      });
+      const payload = await readJsonResponse(response);
+
+      if (response.ok) {
+        currentSession = payload;
+        return true;
+      }
+
+      if (response.status === 401) {
+        await handleSignedOut(payload.error || "Your session ended. Sign in again.");
+        return false;
+      }
+
+      showLoginView(payload.error || "Login is unavailable.", true);
+      setLoginAvailability(false);
+      return false;
+    } catch (error) {
+      console.error(error);
+      return true;
+    }
+  })().finally(() => {
+    sessionVerificationPromise = null;
+  });
+
+  return sessionVerificationPromise;
+}
+
+async function loadCurrentSession() {
+  try {
+    const response = await fetch("/api/auth/session", {
+      credentials: "same-origin",
+    });
+    const payload = await readJsonResponse(response);
+
+    if (response.ok) {
+      setLoginAvailability(true);
+      return payload;
+    }
+
+    if (response.status === 503) {
+      setLoginAvailability(false);
+      showLoginView(payload.error || "Login is unavailable.", true);
+      return null;
+    }
+
+    setLoginAvailability(true);
+    showLoginView("Sign in to continue.");
+    return null;
+  } catch (error) {
+    console.error(error);
+    setLoginAvailability(true);
+    showLoginView("Unable to reach the server.", true);
+    return null;
+  }
+}
+
+async function enterAuthenticatedApp(session) {
+  showAppView(session);
+
+  const nextPath = getNextPath();
+  if (nextPath && nextPath !== "/") {
+    window.location.replace(nextPath);
+    return;
+  }
+
+  clearNextPath();
+  await loadConsultationHistory();
+  connectConsultationStream();
+}
 
 function setConnectionState(state) {
   connectionStateEl.textContent = state;
@@ -278,7 +477,7 @@ ${transcript}`;
 }
 
 async function generateGeminiSummary(prompt) {
-  const response = await fetch("/api/ai/summary", {
+  const response = await authFetch("/api/ai/summary", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -332,7 +531,7 @@ async function summarizeConversation() {
 }
 
 async function postConsultationMessage(payload) {
-  const response = await fetch("/api/consultation/messages", {
+  const response = await authFetch("/api/consultation/messages", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -349,7 +548,7 @@ async function postConsultationMessage(payload) {
 }
 
 async function sendPatientSms(message) {
-  const response = await fetch("/api/patient/sms", {
+  const response = await authFetch("/api/patient/sms", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -402,7 +601,7 @@ function renderConsultationMessage(message) {
 }
 
 async function loadConsultationHistory() {
-  const response = await fetch("/api/consultation/history");
+  const response = await authFetch("/api/consultation/history");
   const payload = await response.json();
   consultationFeedEl.innerHTML = "";
   consultationMessageIds = new Set();
@@ -418,6 +617,13 @@ function connectConsultationStream() {
   consultationStream.addEventListener("message", (event) => {
     const payload = JSON.parse(event.data);
     renderConsultationMessage(payload);
+  });
+  consultationStream.addEventListener("error", async () => {
+    if (!currentSession) {
+      return;
+    }
+
+    await verifyActiveSession();
   });
 }
 
@@ -559,7 +765,7 @@ function floatTo16BitPCM(float32Buffer) {
 }
 
 async function fetchScribeToken() {
-  const response = await fetch("/scribe-token");
+  const response = await authFetch("/scribe-token");
   const payload = await response.json();
 
   if (!response.ok) {
@@ -772,6 +978,63 @@ function toggleSpeaker() {
   }, 300);
 }
 
+loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setLoginAvailability(false);
+  setLoginStatus("Signing in...");
+
+  try {
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username: usernameInput.value.trim(),
+        password: passwordInput.value,
+      }),
+    });
+    const payload = await readJsonResponse(response);
+
+    if (!response.ok) {
+      setLoginAvailability(response.status !== 503);
+      setLoginStatus(payload.error || "Unable to sign in.", true);
+      passwordInput.value = "";
+      return;
+    }
+
+    setLoginAvailability(true);
+    passwordInput.value = "";
+    setLoginStatus("Signed in.");
+    await enterAuthenticatedApp(payload);
+  } catch (error) {
+    console.error(error);
+    setLoginAvailability(true);
+    setLoginStatus(error.message || "Unable to sign in.", true);
+  }
+});
+
+logoutButton.addEventListener("click", async () => {
+  logoutButton.disabled = true;
+
+  try {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+  } catch (error) {
+    console.error(error);
+  } finally {
+    await teardownAuthenticatedState();
+    clearNextPath();
+    showLoginView("Signed out.");
+    logoutButton.disabled = false;
+    passwordInput.value = "";
+    usernameInput.focus();
+  }
+});
+
 transcriptionToggleButton.addEventListener("click", () => {
   if (isTranscribing) {
     stopTranscription();
@@ -855,13 +1118,18 @@ document.addEventListener("keydown", (event) => {
   const isEditingBubble =
     activeElement && activeElement.classList && activeElement.classList.contains("bubble-edit");
   const isTypingConsultation = activeElement === physicianReplyInput;
+  const isTypingInput =
+    activeElement &&
+    (activeElement.tagName === "INPUT" ||
+      activeElement.tagName === "TEXTAREA" ||
+      activeElement.isContentEditable);
 
   if (event.code === "Escape" && !endCallModal.hidden) {
     closeEndCallModal();
     return;
   }
 
-  if (event.code !== "Space" || isEditingBubble || isTypingConsultation) {
+  if (event.code !== "Space" || isEditingBubble || isTypingConsultation || isTypingInput) {
     return;
   }
 
@@ -869,7 +1137,22 @@ document.addEventListener("keydown", (event) => {
   toggleSpeaker();
 });
 
-setActiveSpeaker(currentSpeaker);
-ensureEmptyState();
-loadConsultationHistory();
-connectConsultationStream();
+async function bootstrapApp() {
+  setActiveSpeaker(currentSpeaker);
+  ensureEmptyState();
+  showLoginView("Checking session...");
+
+  const session = await loadCurrentSession();
+  if (!session) {
+    usernameInput.focus();
+    return;
+  }
+
+  try {
+    await enterAuthenticatedApp(session);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+bootstrapApp();

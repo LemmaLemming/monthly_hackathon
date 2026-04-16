@@ -16,6 +16,72 @@ let isDictating = false;
 let dictationCommittedText = "";
 let dictationBubbleBaseline = "";
 let draftVoiceNotePrefix = "";
+let sessionVerificationPromise = null;
+
+function getLoginRedirectTarget() {
+  const next = `${window.location.pathname}${window.location.search}`;
+  return `/?next=${encodeURIComponent(next)}`;
+}
+
+async function readJsonResponse(response) {
+  const rawBody = await response.text();
+
+  if (!rawBody) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(rawBody);
+  } catch {
+    return { error: rawBody };
+  }
+}
+
+function redirectToLogin() {
+  window.location.replace(getLoginRedirectTarget());
+}
+
+async function authFetch(url, options = {}) {
+  const response = await fetch(url, {
+    credentials: "same-origin",
+    ...options,
+  });
+
+  if (response.status === 401 || response.status === 503) {
+    redirectToLogin();
+    throw new Error("Authentication required.");
+  }
+
+  return response;
+}
+
+async function verifyActiveSession() {
+  if (sessionVerificationPromise) {
+    return sessionVerificationPromise;
+  }
+
+  sessionVerificationPromise = (async () => {
+    try {
+      const response = await fetch("/api/auth/session", {
+        credentials: "same-origin",
+      });
+
+      if (response.status === 401 || response.status === 503) {
+        redirectToLogin();
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error(error);
+      return true;
+    }
+  })().finally(() => {
+    sessionVerificationPromise = null;
+  });
+
+  return sessionVerificationPromise;
+}
 
 function scrollToBottom() {
   incomingFeedEl.scrollTop = incomingFeedEl.scrollHeight;
@@ -53,7 +119,7 @@ function renderMessage(message) {
 }
 
 async function loadHistory() {
-  const response = await fetch("/api/consultation/history");
+  const response = await authFetch("/api/consultation/history");
   const payload = await response.json();
   incomingFeedEl.innerHTML = "";
   messageIds = new Set();
@@ -70,10 +136,13 @@ function connectStream() {
     const payload = JSON.parse(event.data);
     renderMessage(payload);
   });
+  consultationStream.addEventListener("error", async () => {
+    await verifyActiveSession();
+  });
 }
 
 async function sendResponse(text) {
-  const response = await fetch("/api/consultation/messages", {
+  const response = await authFetch("/api/consultation/messages", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -92,7 +161,7 @@ async function sendResponse(text) {
 }
 
 async function fetchScribeToken() {
-  const response = await fetch("/scribe-token");
+  const response = await authFetch("/scribe-token");
   const payload = await response.json();
 
   if (!response.ok) {
@@ -368,5 +437,13 @@ voiceTypingButton.addEventListener("click", async () => {
   await startVoiceTyping();
 });
 
-loadHistory();
-connectStream();
+async function bootstrapPortal() {
+  try {
+    await loadHistory();
+    connectStream();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+bootstrapPortal();

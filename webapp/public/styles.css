@@ -32,6 +32,72 @@ body {
     linear-gradient(180deg, var(--bg) 0%, var(--bg-dark) 100%);
 }
 
+.login-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.login-panel {
+  width: min(480px, 100%);
+  padding: 22px;
+  background: var(--panel);
+  border: 2px solid var(--frame);
+  box-shadow:
+    inset 1px 1px 0 var(--panel-edge),
+    inset -1px -1px 0 var(--panel-shadow),
+    4px 4px 0 rgba(40, 50, 60, 0.25);
+}
+
+.login-copy {
+  margin: 14px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-field input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid #7b8793;
+  border-radius: 0;
+  background: #f4f1e5;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  box-shadow: inset 1px 1px 0 #fffdf6;
+}
+
+.login-field input:focus {
+  background: #fffced;
+  border-color: var(--accent);
+}
+
+.login-status {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.login-status[data-state="error"] {
+  color: #7c2f2f;
+}
+
 .app-shell {
   width: min(1600px, calc(100% - 20px));
   margin: 0 auto;
@@ -102,6 +168,14 @@ h1 {
   font-size: 0.92rem;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.session-status {
+  justify-content: space-between;
+}
+
+.compact-button {
+  padding: 8px 12px;
 }
 
 .status-dot,
